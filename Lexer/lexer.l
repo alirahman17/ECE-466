@@ -25,14 +25,13 @@ void yyerror(char *filename, int line, char *msg);
 INT	  [1-9]+[0-9]*
 OCT	  0[0-7]*
 HEX	  0[xX][a-fA-F0-9]+
-FLO   [0-9]*[.]?[0-9]*
+FLO   [0-9]*\.[0-9]*
 EXP   [eE][+-]?{INT}+
 P     [pP][+-]?{INT}+
 %%
 
   /* LINE NUMBERS */
-#                           {BEGIN(INFOS);}
-
+#                           {line = 1; BEGIN(INFOS);}
 <INFOS>^[0-9]+              {line = (int)strtol(yytext, (char **)NULL, 10);}
 <INFOS>\"(\\.|[^\\\"])*\"   {  /* " */
                             strncpy(filename, yytext + 1, strlen(yytext) - 2);
@@ -306,6 +305,14 @@ L?\'                    {mode = CHARLIT; BEGIN(CHARS);}
                   numInfo(yytext, SIGNED_T, FLOAT_T, FLO);
                   return NUMBER;
                 }
+[0]?{INT}+{EXP}[f]?   {
+                        if(yytext[yyleng - 1] == 'f'){
+                          numInfo(yytext, SIGNED_T, FLOAT_T, FLO);
+                        } else{
+                          numInfo(yytext, SIGNED_T, DOUBLE_T, FLO);
+                        }
+                        return NUMBER;
+                      }
 [0]?{FLO}+{EXP}[f]?   {
                         if(yytext[yyleng - 1] == 'f'){
                           numInfo(yytext, SIGNED_T, FLOAT_T, FLO);
@@ -344,7 +351,7 @@ void numInfo(char *buf, int sign, int type, int numType){
     yylval.num.sign = sign;
     yylval.num.type = type;
   } else if(numType == FLO){
-    sscanf(buf, "%Lf", &yylval.num.floatval);
+    yylval.num.floatval = strtod(yytext, NULL);
     yylval.num.sign = sign;
     yylval.num.type = type;
   }
