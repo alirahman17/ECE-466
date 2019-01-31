@@ -25,69 +25,69 @@ void yyerror(char *filename, int line, char *msg);
 INT	  [1-9]+[0-9]*
 OCT	  0[0-7]*
 HEX	  0[xX][a-fA-F0-9]+
-FLO 	[0-9]*[.]?[0-9]*
-EXP 	[eE][+-]?{INT}+
-P 	  [pP][+-]?{INT}+
+FLO   [0-9]*[.]?[0-9]*
+EXP   [eE][+-]?{INT}+
+P     [pP][+-]?{INT}+
 %%
 
   /* LINE NUMBERS */
 #                           {BEGIN(INFOS);}
 
 <INFOS>^[0-9]+              {line = (int)strtol(yytext, (char **)NULL, 10);}
-<INFOS>\"(\\.|[^\\\"])*\"		{  /* " */
-                						strncpy(filename, yytext + 1, strlen(yytext) - 2);
-                						filename[strlen(yytext) - 2] = '\0';
-					                  }
-<INFOS>.				            {;}
-<INFOS>\n 			       	    {BEGIN(INITIAL);}
+<INFOS>\"(\\.|[^\\\"])*\"   {  /* " */
+                            strncpy(filename, yytext + 1, strlen(yytext) - 2);
+                            filename[strlen(yytext) - 2] = '\0';
+                            }
+<INFOS>.                    {;}
+<INFOS>\n                   {BEGIN(INITIAL);}
 
   /* WHITESPACES */
-[\t\v\f ]+     {;}
+[\t\v\f ]+   {;}
 
   /* KEYWORDS */
-"auto"			    {yylval.key = "AUTO"; return AUTO;}
-"break"			    {yylval.key = "BREAK"; return BREAK;}
-"case"		   	  {yylval.key = "CASE"; return CASE;}
-"char"			    {yylval.key = "CHAR"; return CHAR;}
-"const"			    {yylval.key = "CONST"; return CONST;}
-"continue"	    {yylval.key = "CONTINUE"; return CONTINUE;}
-"default"		    {yylval.key = "DEFAULT"; return DEFAULT;}
-"do"			      {yylval.key = "DO"; return DO;}
-"double"		    {yylval.key = "DOUBLE"; return DOUBLE;}
-"else"			    {yylval.key = "ELSE"; return ELSE;}
-"enum"			    {yylval.key = "ENUM"; return ENUM;}
-"extern"		    {yylval.key = "EXTERN"; return EXTERN;}
-"float"			    {yylval.key = "FLOAT"; return FLOAT;}
-"for"			      {yylval.key = "FOR"; return FOR;}
-"goto"			    {yylval.key = "GOTO"; return GOTO;}
-"if"			      {yylval.key = "IF"; return IF;}
-"inline"		    {yylval.key = "INLINE"; return INLINE;}
-"int"			      {yylval.key = "INT"; return INT;}
-"long"			    {yylval.key = "LONG"; return LONG;}
-"register"	    {yylval.key = "REGISTER"; return REGISTER;}
-"restrict"	    {yylval.key = "RESTRICT"; return RESTRICT;}
-"return"		    {yylval.key = "RETURN"; return RETURN;}
-"short"			    {yylval.key = "SHORT"; return SHORT;}
-"signed"		    {yylval.key = "SIGNED"; return SIGNED;}
-"sizeof"		    {yylval.key = "SIZEOF"; return SIZEOF;}
-"static"		    {yylval.key = "STATIC"; return STATIC;}
-"struct"		    {yylval.key = "STRUCT"; return STRUCT;}
-"switch"		    {yylval.key = "SWITCH"; return SWITCH;}
-"typedef"		    {yylval.key = "TYPEDEF"; return TYPEDEF;}
-"union"			    {yylval.key = "UNION"; return UNION;}
-"unsigned"	    {yylval.key = "UNSIGNED"; return UNSIGNED;}
-"void"			    {yylval.key = "VOID"; return VOID;}
-"volatile"	    {yylval.key = "VOLATILE"; return VOLATILE;}
-"while"			    {yylval.key = "WHILE"; return WHILE;}
-"_Bool"			    {yylval.key = "_BOOL"; return _BOOL;}
-"_Complex"	    {yylval.key = "_COMPLEX"; return _COMPLEX;}
-"_Imaginary"		{yylval.key = "_IMAGINARY"; return _IMAGINARY;}
+"auto"          {yylval.key = "AUTO"; return AUTO;}
+"break"         {yylval.key = "BREAK"; return BREAK;}
+"case"          {yylval.key = "CASE"; return CASE;}
+"char"          {yylval.key = "CHAR"; return CHAR;}
+"const"         {yylval.key = "CONST"; return CONST;}
+"continue"      {yylval.key = "CONTINUE"; return CONTINUE;}
+"default"       {yylval.key = "DEFAULT"; return DEFAULT;}
+"do"            {yylval.key = "DO"; return DO;}
+"double"        {yylval.key = "DOUBLE"; return DOUBLE;}
+"else"          {yylval.key = "ELSE"; return ELSE;}
+"enum"          {yylval.key = "ENUM"; return ENUM;}
+"extern"        {yylval.key = "EXTERN"; return EXTERN;}
+"float"         {yylval.key = "FLOAT"; return FLOAT;}
+"for"           {yylval.key = "FOR"; return FOR;}
+"goto"          {yylval.key = "GOTO"; return GOTO;}
+"if"            {yylval.key = "IF"; return IF;}
+"inline"        {yylval.key = "INLINE"; return INLINE;}
+"int"           {yylval.key = "INT"; return INT;}
+"long"          {yylval.key = "LONG"; return LONG;}
+"register"      {yylval.key = "REGISTER"; return REGISTER;}
+"restrict"      {yylval.key = "RESTRICT"; return RESTRICT;}
+"return"        {yylval.key = "RETURN"; return RETURN;}
+"short"         {yylval.key = "SHORT"; return SHORT;}
+"signed"        {yylval.key = "SIGNED"; return SIGNED;}
+"sizeof"        {yylval.key = "SIZEOF"; return SIZEOF;}
+"static"        {yylval.key = "STATIC"; return STATIC;}
+"struct"        {yylval.key = "STRUCT"; return STRUCT;}
+"switch"        {yylval.key = "SWITCH"; return SWITCH;}
+"typedef"       {yylval.key = "TYPEDEF"; return TYPEDEF;}
+"union"         {yylval.key = "UNION"; return UNION;}
+"unsigned"      {yylval.key = "UNSIGNED"; return UNSIGNED;}
+"void"          {yylval.key = "VOID"; return VOID;}
+"volatile"      {yylval.key = "VOLATILE"; return VOLATILE;}
+"while"         {yylval.key = "WHILE"; return WHILE;}
+"_Bool"         {yylval.key = "_BOOL"; return _BOOL;}
+"_Complex"      {yylval.key = "_COMPLEX"; return _COMPLEX;}
+"_Imaginary"    {yylval.key = "_IMAGINARY"; return _IMAGINARY;}
 
   /* IDENTIFIERS */
 [a-zA-Z_][a-zA-Z0-9_]*  {yylval.ident.name = strdup(yytext); return IDENT;}
 
   /* CHARLIT */
-L?\'					          {mode = CHARLIT; BEGIN(CHARS);}
+L?\'                    {mode = CHARLIT; BEGIN(CHARS);}
 
 <CHARS>[^\n\\\']+       {
                           if(yyleng > 1){
@@ -109,85 +109,83 @@ L?\'					          {mode = CHARLIT; BEGIN(CHARS);}
                         }
 
   /* STRING */
-\"				             	{
-    						          yylval.string.length = 0;
-    						          mode = STRING;
-    						          BEGIN(STRINGS);
-  					            }
-<STRINGS>[^\n\\\"]*		  {
-  						            stringAppend(yytext, (char)NULL);
-  					            }
-<STRINGS>\\			        {
-  						            BEGIN(ESCS);
-   					            }
-<STRINGS>\"			        {
-              						BEGIN(INITIAL);
-              						mode = 0;
-              						return STRING;
-  					            }
+\"                      {
+                          yylval.string.length = 0;
+                          mode = STRING;
+                          BEGIN(STRINGS);
+                        }
+<STRINGS>[^\n\\\"]*     {
+                          stringAppend(yytext, (char)NULL);
+                        }
+<STRINGS>\\             {
+                          BEGIN(ESCS);
+                        }
+<STRINGS>\"             {
+                          BEGIN(INITIAL);
+                          mode = 0;
+                          return STRING;
+                        }
 
   /* ESCAPE */
-  /* Escape Codes */
 <ESCS>[0abfnrtv'"\\?]	  { /* "' */
-  					             char esc;
-                				 switch(yytext[0]){
-                						case '0': 	esc = '\0'; break;
-                						case 'a': 	esc = '\a'; break;
-                						case 'b': 	esc = '\b'; break;
-                						case 'f': 	esc = '\f'; break;
-                						case 'n': 	esc = '\n'; break;
-                						case 'r': 	esc = '\r'; break;
-                						case 't': 	esc = '\t'; break;
-                						case 'v': 	esc = '\v'; break;
-                						case '\'': 	esc = '\''; break;
-                						case '"': 	esc = '\"'; break;
-                						case '\\': 	esc = '\\'; break;
-                						case '?':	  esc = '\?'; break;
-                				 }
-                				 switch(mode){
-                						case CHARLIT:	yylval.charlit = esc;
-                								          BEGIN(CHARS);
-                								          break;
-
-                						case STRING:	stringAppend((char *)NULL, esc);
-                								          BEGIN(STRINGS);
-                				 }
-  				              }
-<ESCS>[0-7]{1,3}	     	{
-                					int oct;
-                					sscanf(yytext, "%o", &oct);
-                					if (oct > 255){
-                						fprintf(stderr, "%s: %d: Warning: Octal escape sequence \\%s out of range\n", filename, line, yytext);
-                						oct = 255;
-                					}
-                					char octC = (char)oct;
+                          char esc;
+                          switch(yytext[0]){
+                            case '0': 	esc = '\0'; break;
+                            case 'a': 	esc = '\a'; break;
+                            case 'b': 	esc = '\b'; break;
+                            case 'f': 	esc = '\f'; break;
+                            case 'n': 	esc = '\n'; break;
+                            case 'r': 	esc = '\r'; break;
+                            case 't': 	esc = '\t'; break;
+                            case 'v': 	esc = '\v'; break;
+                            case '\'': 	esc = '\''; break;
+                            case '"': 	esc = '\"'; break;
+                            case '\\': 	esc = '\\'; break;
+                            case '?':	  esc = '\?'; break;
+                          }
                           switch(mode){
-                 						case CHARLIT:	yylval.charlit = octC;
-                 								          BEGIN(CHARS);
-                 								          break;
+                            case CHARLIT:	yylval.charlit = esc;
+                                          BEGIN(CHARS);
+                                          break;
 
-                 						case STRING:	stringAppend((char *)NULL, octC);
-                 								          BEGIN(STRINGS);
-                 				  }
-                				}
-<ESCS>[xX][0-9a-fA-F]+	{
-                					int hex;
-                					sscanf(yytext + 1, "%x", &hex);
-                					if (hex > 255)
-                					{
-                						fprintf(stderr, "%s: %d: Warning: Hex escape sequence \\%s out of range\n", filename, line, yytext);
-                						hex = 255;
-                					}
-                					char hexC = (char)hex;
+                            case STRING:	stringAppend((char *)NULL, esc);
+                                          BEGIN(STRINGS);
+                          }
+                        }
+<ESCS>[0-7]{1,3}        {
+                          int oct;
+                          sscanf(yytext, "%o", &oct);
+                          if (oct > 255){
+                            fprintf(stderr, "%s: %d: Warning: Octal escape sequence \\%s out of range\n", filename, line, yytext);
+                            oct = 255;
+                          }
+                          char octC = (char)oct;
                           switch(mode){
-                 						case CHARLIT:	yylval.charlit = hexC;
-                 								          BEGIN(CHARS);
-                 								          break;
+                            case CHARLIT:	yylval.charlit = octC;
+                                          BEGIN(CHARS);
+                                          break;
 
-                 						case STRING:	stringAppend((char *)NULL, hexC);
-                 								          BEGIN(STRINGS);
-                 				  }
-  				              }
+                            case STRING:	stringAppend((char *)NULL, octC);
+                                          BEGIN(STRINGS);
+                          }
+                        }
+<ESCS>[xX][0-9a-fA-F]+  {
+                          int hex;
+                          sscanf(yytext + 1, "%x", &hex);
+                          if (hex > 255){
+                            fprintf(stderr, "%s: %d: Warning: Hex escape sequence \\%s out of range\n", filename, line, yytext);
+                            hex = 255;
+                          }
+                          char hexC = (char)hex;
+                          switch(mode){
+                            case CHARLIT:	yylval.charlit = hexC;
+                                          BEGIN(CHARS);
+                                          break;
+
+                            case STRING:	stringAppend((char *)NULL, hexC);
+                                          BEGIN(STRINGS);
+                          }
+                        }
 
   /* OPERATORS */
 [-~!%^&*+=\|<.>/?]	{return yytext[0];}
@@ -200,9 +198,9 @@ L?\'					          {mode = CHARLIT; BEGIN(CHARS);}
 ">="            {yylval.key = "GTEQ"; return GTEQ;}
 "=="            {yylval.key = "EQEQ"; return EQEQ;}
 "!="            {yylval.key = "NOTEQ"; return NOTEQ;}
-"&&"         		{yylval.key = "LOGAND"; return LOGAND;}
-"||"         		{yylval.key = "LOGOR"; return LOGOR;}
-"..."			      {yylval.key = "ELLIPSIS"; return ELLIPSIS;}
+"&&"            {yylval.key = "LOGAND"; return LOGAND;}
+"||"            {yylval.key = "LOGOR"; return LOGOR;}
+"..."           {yylval.key = "ELLIPSIS"; return ELLIPSIS;}
 "*="            {yylval.key = "TIMESEQ"; return TIMESEQ;}
 "/="            {yylval.key = "DIVEQ"; return DIVEQ;}
 "%="            {yylval.key = "MODEQ"; return MODEQ;}
@@ -294,22 +292,22 @@ L?\'					          {mode = CHARLIT; BEGIN(CHARS);}
                   numInfo(yytext, SIGNED_T, DOUBLE_T, FLO);
                   return NUMBER;
                 }
-{FLO}		        {
-  					      numInfo(yytext, SIGNED_T, DOUBLE_T, FLO);
-  					      return NUMBER;
-				        }
-{FLO}"L"		    {
+{FLO}           {
+                  numInfo(yytext, SIGNED_T, DOUBLE_T, FLO);
+                  return NUMBER;
+                }
+{FLO}"L"        {
                   yytext[yyleng - 1] = '\0';
-  					      numInfo(yytext, SIGNED_T, LONGDOUBLE_T, FLO);
-  					      return NUMBER;
-				        }
-{FLO}"f"			  {
+                  numInfo(yytext, SIGNED_T, LONGDOUBLE_T, FLO);
+                  return NUMBER;
+                }
+{FLO}"f"        {
                   yytext[yyleng - 1] = '\0';
                   numInfo(yytext, SIGNED_T, FLOAT_T, FLO);
                   return NUMBER;
                 }
-[0]?{FLO}+{EXP}[f]?		{
-  					            if(yytext[yyleng - 1] == 'f'){
+[0]?{FLO}+{EXP}[f]?   {
+                        if(yytext[yyleng - 1] == 'f'){
                           numInfo(yytext, SIGNED_T, FLOAT_T, FLO);
                         } else{
                           numInfo(yytext, SIGNED_T, DOUBLE_T, FLO);
@@ -319,16 +317,16 @@ L?\'					          {mode = CHARLIT; BEGIN(CHARS);}
 
 
   /* Ignore Comments */
-\/\*            		{BEGIN(COMMENTS);}
-<COMMENTS>.|\n    	{;}
-<COMMENTS>\*\/   		{BEGIN(INITIAL);}
-\/\/.*\n        		{;}
+\/\*                {BEGIN(COMMENTS);}
+<COMMENTS>.|\n      {;}
+<COMMENTS>\*\/      {BEGIN(INITIAL);}
+\/\/.*\n            {;}
 
   /* Update line numbers */
-\n 			{line++;}
+\n      {line++;}
 
   /* Throw error if no appropriate token is found */
-.				{fprintf(stderr, "Error: Undefined token: %s\n", yytext); exit(-1);}
+.       {fprintf(stderr, "Error: Undefined token: %s\n", yytext); exit(-1);}
 
 %%
 
@@ -354,18 +352,16 @@ void numInfo(char *buf, int sign, int type, int numType){
 }
 
 void stringAppend(char *buf, char c){
-	if(buf == (char *)NULL)
-	{
-		yylval.string.word[yylval.string.length] = c;
-		yylval.string.length++;
-	}
-	else
-	{
-		for(int i = 0; i < strlen(buf); i++){
+  if(buf == (char *)NULL){
+    yylval.string.word[yylval.string.length] = c;
+    yylval.string.length++;
+  }
+  else{
+    for(int i = 0; i < strlen(buf); i++){
       yylval.string.word[yylval.string.length + i] = buf[i];
     }
-		yylval.string.length += strlen(buf);
-	}
+    yylval.string.length += strlen(buf);
+  }
 }
 
 void yywarn(char *filename, int line, char *msg){
@@ -396,7 +392,7 @@ void specialChar(char c)
               } else{
                 fprintf(stdout, "%c", c);
               }
-				      break;
+              break;
 	}
 }
 
@@ -404,13 +400,13 @@ void numberType(int c)
 {
 	switch(c)
 	{
-    case INT_T:	      	fprintf(stdout, "INT\n"); break;
-    case LONG_T:		    fprintf(stdout, "LONG\n"); break;
+    case INT_T:         fprintf(stdout, "INT\n"); break;
+    case LONG_T:        fprintf(stdout, "LONG\n"); break;
     case LONGLONG_T: 	  fprintf(stdout, "LONGLONG\n"); break;
-    case DOUBLE_T: 		  fprintf(stdout, "DOUBLE\n"); break;
+    case DOUBLE_T:      fprintf(stdout, "DOUBLE\n"); break;
     case LONGDOUBLE_T: 	fprintf(stdout, "LONGDOUBLE\n"); break;
-    case FLOAT_T: 		  fprintf(stdout, "FLOAT\n"); break;
-		default:	break;
+    case FLOAT_T:       fprintf(stdout, "FLOAT\n"); break;
+    default:	break;
 	}
 }
 
@@ -428,12 +424,12 @@ int main(int argc, char **argv)
                       specialChar(yylval.charlit);
                       fprintf(stdout, "\n");
                       break;
-        case STRING:	fprintf(stdout, "%s\t %d\t STRING\t\t ", filename, line);
-          						for(int i = 0; i < yylval.string.length; i++){
+        case STRING:  fprintf(stdout, "%s\t %d\t STRING\t\t ", filename, line);
+                      for(int i = 0; i < yylval.string.length; i++){
                         specialChar(yylval.string.word[i]);
                       }
-          						fprintf(stdout, "\n");
-          						break;
+                      fprintf(stdout, "\n");
+                      break;
         case NUMBER:  fprintf(stdout, "%s\t %d\t NUMBER\t ", filename, line);
                       if(yylval.num.type == INT_T || yylval.num.type == LONG_T || yylval.num.type == LONGLONG_T){
                         fprintf(stdout, "INTEGER\t %lld\t", yylval.num.intval);
@@ -445,8 +441,8 @@ int main(int argc, char **argv)
                       }
                       numberType(yylval.num.type);
                       break;
-        default:	    fprintf(stdout, "%s\t %d\t %s\n", filename, line, yylval.key);
-						          break;
+        default:      fprintf(stdout, "%s\t %d\t %s\n", filename, line, yylval.key);
+                      break;
       }
     }
   }
