@@ -1,2 +1,7 @@
 
 *.pdf
+*.exe
+lex.yy.c
+test.c
+Lexer/ltest.err
+Lexer/ltest.out
