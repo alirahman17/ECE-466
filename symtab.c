@@ -101,15 +101,20 @@ int traceback(struct sym *entry){
           case CONST: printf("CONST\n"); break;
           case RESTRICT: printf("RESTRICT\n"); break;
           case VOLATILE: printf("VOLATILE \n"); break;
+          case 604: printf("LONG LONG\n"); break;
+          case 594: printf("LONG DOUBLE\n"); break;
+          case 595: printf("SIGNED CHAR\n"); break;
+          case 596: printf("UNSIGNED CHAR\n"); break;
+          case 615: printf("UNSIGNED INT\n"); break;
           default: printf("ERROR: UNKNOWN SCALAR\n"); break;
         }
         break;
       }
       case AST_QUAL: {
         switch(n->u.scalar.qual) {
-          case CONST: printf("CONST\n"); break;
-          case RESTRICT: printf("RESTRICT\n"); break;
-          case VOLATILE: printf("VOLATILE \n"); break;
+          case CONST: printf("CONST "); break;
+          case RESTRICT: printf("RESTRICT "); break;
+          case VOLATILE: printf("VOLATILE "); break;
           default: break;
         }
         break;
@@ -119,7 +124,7 @@ int traceback(struct sym *entry){
         break;
       }
       case AST_ARR: {
-        printf("array #%d\n", n->u.arr.num);
+        printf("array with %d elements\n", n->u.arr.num);
         break;
       }
       default: {

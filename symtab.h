@@ -79,6 +79,7 @@ int print_sym(struct sym *entry, int step);
 int print_table(struct sym_tab *table);
 
 //struct sym *get_sym(struct sym_tab *table, char *name, enum namespace_type);
+struct sym *update_sym(struct ast_node *n, struct sym_tab *curr_tab, struct sym *entry);
 struct sym *install_sym(struct sym_tab *curr_tab, struct sym *entry, int line);
 struct sym *add_sym(struct ast_node *n, struct sym_tab *curr_tab, char *fname, int line);
 

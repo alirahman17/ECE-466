@@ -57,6 +57,7 @@ decl_func_list : decl_func {}
 
 decl_func      : decl {}
                | func {}
+               | decl_stmt_list {}
                ;
 
 func           : decl_specs declarator '{' {
@@ -79,7 +80,6 @@ decl_stmt_list : decl_stmt {}
 
 decl_stmt      : decl {}
                | expr_statement {
-                /*print_tree($1, 0);*/
                }
                ;
 
@@ -95,9 +95,9 @@ decl           : decl_specs ';' {}
 decl_specs     : type_spec {
                 $$ = $1;
                }
-               | type_spec decl_specs {
+               /*| type_spec decl_specs {
                 $$ = $1;
-               }
+               }*/
                | type_qual {
                 $$ = $1;
                }
@@ -170,9 +170,19 @@ type_spec      : VOID {
                  n->u.scalar.type = 302;
                  $$ = n;
                }
+               | LONG LONG {
+                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
+                 n->u.scalar.type = 604;
+                 $$ = n;
+               }
                | FLOAT {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 296;
+                 $$ = n;
+               }
+               | LONG DOUBLE {
+                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
+                 n->u.scalar.type = 594;
                  $$ = n;
                }
                | DOUBLE {
@@ -185,9 +195,24 @@ type_spec      : VOID {
                  n->u.scalar.type = 307;
                  $$ = n;
                }
+               | SIGNED CHAR {
+                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
+                 n->u.scalar.type = 595;
+                 $$ = n;
+               }
+               | UNSIGNED CHAR {
+                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
+                 n->u.scalar.type = 596;
+                 $$ = n;
+               }
                | UNSIGNED {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 314;
+                 $$ = n;
+               }
+               | UNSIGNED INT {
+                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
+                 n->u.scalar.type = 615;
                  $$ = n;
                }
                | _BOOL {
@@ -204,17 +229,17 @@ type_spec      : VOID {
 
 type_qual      : CONST {
                 struct ast_node *n = ast_node_alloc(AST_QUAL);
-                n->u.scalar.type = 288;
+                n->u.scalar.qual = 288;
                 $$ = n;
                }
                | RESTRICT {
                  struct ast_node *n = ast_node_alloc(AST_QUAL);
-                 n->u.scalar.type = 304;
+                 n->u.scalar.qual = 304;
                  $$ = n;
                }
                | VOLATILE {
                  struct ast_node *n = ast_node_alloc(AST_QUAL);
-                 n->u.scalar.type = 316;
+                 n->u.scalar.qual = 316;
                  $$ = n;
                }
                ;
@@ -665,6 +690,7 @@ assignment_expr :  conditional_expr
                   binop->u.binop.right = $3;
                   $$->u.assign.right = binop;
                  }
+                 print_ast($$, 0);
                 }
                 ;
 
