@@ -88,7 +88,7 @@ int traceback(struct sym *entry){
   struct ast_node *n = entry->n;
   while(n != NULL){
     int curr_ind = indent;
-    printf("%.*s", indent, " ");
+    printf("%.*s", indent, "                                                                              ");
     int node_type = n->node_type;
     switch(node_type){
       case AST_SCALAR: {
@@ -105,6 +105,15 @@ int traceback(struct sym *entry){
         }
         break;
       }
+      case AST_QUAL: {
+        switch(n->u.scalar.qual) {
+          case CONST: printf("CONST\n"); break;
+          case RESTRICT: printf("RESTRICT\n"); break;
+          case VOLATILE: printf("VOLATILE \n"); break;
+          default: break;
+        }
+        break;
+      }
       case AST_POINTER: {
         printf("pointer to \n");
         break;
@@ -118,7 +127,7 @@ int traceback(struct sym *entry){
       }
     }
     n = n->next;
-    ++indent;
+    indent = indent + 1;
   }
   return 0;
 }

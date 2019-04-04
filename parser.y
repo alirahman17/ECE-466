@@ -203,14 +203,19 @@ type_spec      : VOID {
                ;
 
 type_qual      : CONST {
-                /*n->u.scalar.type = $1;*/
-                /*$$ = n;*/
+                struct ast_node *n = ast_node_alloc(AST_QUAL);
+                n->u.scalar.type = 288;
+                $$ = n;
                }
                | RESTRICT {
-
+                 struct ast_node *n = ast_node_alloc(AST_QUAL);
+                 n->u.scalar.type = 304;
+                 $$ = n;
                }
                | VOLATILE {
-
+                 struct ast_node *n = ast_node_alloc(AST_QUAL);
+                 n->u.scalar.type = 316;
+                 $$ = n;
                }
                ;
 
