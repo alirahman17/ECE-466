@@ -5,16 +5,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+/*
 #include "lexer.h"
 #include "tokens-manual.h"
-
-char filename[64] = "<stdin>";
+*/
+#include "def.h"
+#include "parser.tab.h"
+char filename[256] = "<stdin>";
 int mode = 0;
 int line = 1;
 void numInfo(char *buf, int sign, int type, int numType);
 void stringAppend(char *buf, char c);
 void yywarn(char *filename, int line, char *msg);
-void yyerror(char *filename, int line, char *msg);
+void yyerrorL(char *filename, int line, char *msg);
 %}
 %x CHARS
 %x STRINGS
@@ -44,43 +47,43 @@ P     [pP][+-]?{INT}+
 [\t\v\f ]+   {;}
 
   /* KEYWORDS */
-"auto"          {yylval.key = "AUTO"; return AUTO;}
-"break"         {yylval.key = "BREAK"; return BREAK;}
-"case"          {yylval.key = "CASE"; return CASE;}
-"char"          {yylval.key = "CHAR"; return CHAR;}
-"const"         {yylval.key = "CONST"; return CONST;}
-"continue"      {yylval.key = "CONTINUE"; return CONTINUE;}
-"default"       {yylval.key = "DEFAULT"; return DEFAULT;}
-"do"            {yylval.key = "DO"; return DO;}
-"double"        {yylval.key = "DOUBLE"; return DOUBLE;}
-"else"          {yylval.key = "ELSE"; return ELSE;}
-"enum"          {yylval.key = "ENUM"; return ENUM;}
-"extern"        {yylval.key = "EXTERN"; return EXTERN;}
-"float"         {yylval.key = "FLOAT"; return FLOAT;}
-"for"           {yylval.key = "FOR"; return FOR;}
-"goto"          {yylval.key = "GOTO"; return GOTO;}
-"if"            {yylval.key = "IF"; return IF;}
-"inline"        {yylval.key = "INLINE"; return INLINE;}
-"int"           {yylval.key = "INT"; return INT;}
-"long"          {yylval.key = "LONG"; return LONG;}
-"register"      {yylval.key = "REGISTER"; return REGISTER;}
-"restrict"      {yylval.key = "RESTRICT"; return RESTRICT;}
-"return"        {yylval.key = "RETURN"; return RETURN;}
-"short"         {yylval.key = "SHORT"; return SHORT;}
-"signed"        {yylval.key = "SIGNED"; return SIGNED;}
-"sizeof"        {yylval.key = "SIZEOF"; return SIZEOF;}
-"static"        {yylval.key = "STATIC"; return STATIC;}
-"struct"        {yylval.key = "STRUCT"; return STRUCT;}
-"switch"        {yylval.key = "SWITCH"; return SWITCH;}
-"typedef"       {yylval.key = "TYPEDEF"; return TYPEDEF;}
-"union"         {yylval.key = "UNION"; return UNION;}
-"unsigned"      {yylval.key = "UNSIGNED"; return UNSIGNED;}
-"void"          {yylval.key = "VOID"; return VOID;}
-"volatile"      {yylval.key = "VOLATILE"; return VOLATILE;}
-"while"         {yylval.key = "WHILE"; return WHILE;}
-"_Bool"         {yylval.key = "_BOOL"; return _BOOL;}
-"_Complex"      {yylval.key = "_COMPLEX"; return _COMPLEX;}
-"_Imaginary"    {yylval.key = "_IMAGINARY"; return _IMAGINARY;}
+"auto"          {return AUTO;}
+"break"         {return BREAK;}
+"case"          {return CASE;}
+"char"          {return CHAR;}
+"const"         {return CONST;}
+"continue"      {return CONTINUE;}
+"default"       {return DEFAULT;}
+"do"            {return DO;}
+"double"        {return DOUBLE;}
+"else"          {return ELSE;}
+"enum"          {return ENUM;}
+"extern"        {return EXTERN;}
+"float"         {return FLOAT;}
+"for"           {return FOR;}
+"goto"          {return GOTO;}
+"if"            {return IF;}
+"inline"        {return INLINE;}
+"int"           {return INT;}
+"long"          {return LONG;}
+"register"      {return REGISTER;}
+"restrict"      {return RESTRICT;}
+"return"        {return RETURN;}
+"short"         {return SHORT;}
+"signed"        {return SIGNED;}
+"sizeof"        {return SIZEOF;}
+"static"        {return STATIC;}
+"struct"        {return STRUCT;}
+"switch"        {return SWITCH;}
+"typedef"       {return TYPEDEF;}
+"union"         {return UNION;}
+"unsigned"      {return UNSIGNED;}
+"void"          {return VOID;}
+"volatile"      {return VOLATILE;}
+"while"         {return WHILE;}
+"_Bool"         {return _BOOL;}
+"_Complex"      { return _COMPLEX;}
+"_Imaginary"    {return _IMAGINARY;}
 
   /* IDENTIFIERS */
 [a-zA-Z_][a-zA-Z0-9_]*  {yylval.ident.name = strdup(yytext); return IDENT;}
@@ -98,7 +101,7 @@ L?\'                    {mode = CHARLIT; BEGIN(CHARS);}
                           BEGIN(ESCS);
                         }
 <CHARS>\n               {
-                          yyerror(filename, line, "Unexpected newline");
+                          yyerrorL(filename, line, "Unexpected newline");
                           exit(-1);
                         }
 <CHARS>\'               {
@@ -114,7 +117,7 @@ L?\'                    {mode = CHARLIT; BEGIN(CHARS);}
                           BEGIN(STRINGS);
                         }
 <STRINGS>[^\n\\\"]*     {
-                          stringAppend(yytext, (char)NULL);
+                          stringAppend(yytext, '\0');
                         }
 <STRINGS>\\             {
                           BEGIN(ESCS);
@@ -188,28 +191,28 @@ L?\'                    {mode = CHARLIT; BEGIN(CHARS);}
 
   /* OPERATORS */
 [-~!%^&*+=\|<.>/?]	{return yytext[0];}
-"->"            {yylval.key = "INDSEL"; return INDSEL;}
-"++"            {yylval.key = "PLUSPLUS"; return PLUSPLUS;}
-"--"            {yylval.key = "MINUSMINUS"; return MINUSMINUS;}
-"<<"            {yylval.key = "SHL"; return SHL;}
-">>"            {yylval.key = "SHR"; return SHR;}
-"<="            {yylval.key = "LTEQ"; return LTEQ;}
-">="            {yylval.key = "GTEQ"; return GTEQ;}
-"=="            {yylval.key = "EQEQ"; return EQEQ;}
-"!="            {yylval.key = "NOTEQ"; return NOTEQ;}
-"&&"            {yylval.key = "LOGAND"; return LOGAND;}
-"||"            {yylval.key = "LOGOR"; return LOGOR;}
-"..."           {yylval.key = "ELLIPSIS"; return ELLIPSIS;}
-"*="            {yylval.key = "TIMESEQ"; return TIMESEQ;}
-"/="            {yylval.key = "DIVEQ"; return DIVEQ;}
-"%="            {yylval.key = "MODEQ"; return MODEQ;}
-"+="            {yylval.key = "PLUSEQ"; return PLUSEQ;}
-"-="            {yylval.key = "MINUSEQ"; return MINUSEQ;}
-"<<="           {yylval.key = "SHLEQ"; return SHLEQ;}
-">>="           {yylval.key = "SHREQ"; return SHREQ;}
-"&="            {yylval.key = "ANDEQ"; return ANDEQ;}
-"|="            {yylval.key = "OREQ"; return OREQ;}
-"^="            {yylval.key = "XOREQ"; return XOREQ;}
+"->"            {return INDSEL;}
+"++"            {return PLUSPLUS;}
+"--"            {return MINUSMINUS;}
+"<<"            {return SHL;}
+">>"            {return SHR;}
+"<="            {return LTEQ;}
+">="            {return GTEQ;}
+"=="            {return EQEQ;}
+"!="            {return NOTEQ;}
+"&&"            {return LOGAND;}
+"||"            {return LOGOR;}
+"..."           {return ELLIPSIS;}
+"*="            {return TIMESEQ;}
+"/="            {return DIVEQ;}
+"%="            {return MODEQ;}
+"+="            {return PLUSEQ;}
+"-="            {return MINUSEQ;}
+"<<="           {return SHLEQ;}
+">>="           {return SHREQ;}
+"&="            {return ANDEQ;}
+"|="            {return OREQ;}
+"^="            {return XOREQ;}
 
   /* PUNCTUATION */
 [](){}[:;,]     {return yytext[0];}
@@ -339,7 +342,7 @@ L?\'                    {mode = CHARLIT; BEGIN(CHARS);}
 
 void numInfo(char *buf, int sign, int type, int numType){
   if(numType == INTQ){
-    yylval.num.intval = atoi(buf);
+    yylval.num.intval = strtoull(buf, (char **)NULL, 10);
     yylval.num.sign = sign;
     yylval.num.type = type;
   } else if(numType == OCT){
@@ -375,7 +378,7 @@ void yywarn(char *filename, int line, char *msg){
   fprintf(stderr, "%s: %d: Warning: %s\n", filename, line, msg);
 }
 
-void yyerror(char *filename, int line, char *msg){
+void yyerrorL(char *filename, int line, char *msg){
   fprintf(stderr, "%s: %d: Error: %s\n", filename, line, msg);
 }
 
@@ -403,6 +406,73 @@ void specialChar(char c)
 	}
 }
 
+char* print_kw(int token)
+{
+	switch(token)
+	{
+		case INDSEL:		return "INDSEL";
+		case PLUSPLUS:		return "PLUSPLUS";
+		case MINUSMINUS:	return "MINUSMINUS";
+		case SHL:		return "SHL";
+		case SHR:		return "SHR";
+		case LTEQ:		return "LTEQ";
+		case GTEQ:		return "GTEQ";
+		case EQEQ:		return "EQEQ";
+		case NOTEQ:		return "NOTEQ";
+		case LOGAND:		return "LOGAND";
+		case LOGOR:		return "LOGOR";
+		case ELLIPSIS:		return "ELLIPSIS";
+		case TIMESEQ:		return "TIMESEQ";
+		case DIVEQ:		return "DIVEQ";
+		case MODEQ:		return "MODEQ";
+		case PLUSEQ:		return "PLUSEQ";
+		case MINUSEQ:		return "MINUSEQ";
+		case SHLEQ:		return "SHLEQ";
+		case SHREQ:		return "SHREQ";
+		case ANDEQ:		return "ANDEQ";
+		case OREQ:		return "OREQ";
+		case XOREQ:		return "XOREQ";
+		case AUTO:		return "AUTO";
+		case BREAK:		return "BREAK";
+		case CASE:		return "CASE";
+		case CHAR:		return "CHAR";
+		case CONST:		return "CONST";
+		case CONTINUE:		return "CONTINUE";
+		case DEFAULT:		return "DEFAULT";
+		case DO:		return "DO";
+		case DOUBLE:		return "DOUBLE";
+		case ELSE:		return "ELSE";
+		case ENUM:		return "ENUM";
+		case EXTERN:		return "EXTERN";
+		case FLOAT:		return "FLOAT";
+		case FOR:		return "FOR";
+		case GOTO:		return "GOTO";
+		case IF:		return "IF";
+		case INLINE:		return "INLINE";
+		case INT:		return "INT";
+		case LONG:		return "LONG";
+		case REGISTER:		return "REGISTER";
+		case RESTRICT:		return "RESTRICT";
+		case RETURN:		return "RETURN";
+		case SHORT:		return "SHORT";
+		case SIGNED:		return "SIGNED";
+		case SIZEOF:		return "SIZEOF";
+		case STATIC:		return "STATIC";
+		case STRUCT:		return "STRUCT";
+		case SWITCH:		return "SWITCH";
+		case TYPEDEF:		return "TYPEDEF";
+		case UNION:		return "UNION";
+		case UNSIGNED:		return "UNSIGNED";
+		case VOID:		return "VOID";
+		case VOLATILE:		return "VOLATILE";
+		case WHILE:		return "WHILE";
+		case _BOOL:		return "_BOOL";
+		case _COMPLEX:		return "_COMPLEX";
+		case _IMAGINARY:	return "_IMAGINARY";
+		default:		return "ERROR";
+	}
+}
+
 void numberType(int c)
 {
 	switch(c)
@@ -417,6 +487,7 @@ void numberType(int c)
 	}
 }
 
+#if 0
 int main(int argc, char **argv)
 {
   int c;
@@ -448,9 +519,10 @@ int main(int argc, char **argv)
                       }
                       numberType(yylval.num.type);
                       break;
-        default:      fprintf(stdout, "%s\t %d\t %s\n", filename, line, yylval.key);
+        default:      fprintf(stdout, "%s\t %d\n", filename, line);
                       break;
       }
     }
   }
 }
+#endif

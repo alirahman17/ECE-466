@@ -5,3 +5,7 @@ lex.yy.c
 test.c
 Lexer/ltest.err
 Lexer/ltest.out
+*.out
+base.c
+symtest.c
+exprtests.c
