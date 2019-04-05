@@ -14,7 +14,8 @@ int add_stg_class(struct sym *entry);
 int enter_scope(int type);
 int exit_scope();
 int stg;
-struct ast_node *head, *tail;
+struct ast_node *head;
+struct ast_node *tail;
 struct sym_tab *curr_scope;
 %}
 %error-verbose
@@ -47,6 +48,25 @@ struct sym_tab *curr_scope;
 %type <astn> expr_statement
 %type <astn> decl_func_list decl_func func decl_stmt_list decl_stmt compound_stmt decl decl_specs type_spec type_qual stg_spec direct_decl declarator pointer type_qual_list
 
+%left ','
+%right TIMESEQ
+%right '='
+%right '?' ':'
+%left LOGOR
+%left LOGAND
+%left '|'
+%left '^'
+%left '&'
+%left EQEQ NOTEQ
+%left '>' '<' LTEQ GTEQ
+%left SHL SHR
+%left '+' '-'
+%left '*' '/' '%'
+%left PLUSPLUS MINUSMINUS
+%left '.'
+%left '[' ']'
+%left '(' ')'
+
 %start decl_func_list
 
 %%
@@ -55,22 +75,34 @@ decl_func_list : decl_func {}
                | decl_func_list decl_func {}
                ;
 
-decl_func      : decl {}
+decl_func      : decl_stmt {}
                | func {}
-               | decl_stmt_list {}
                ;
 
 func           : decl_specs declarator '{' {
-                ast_node_link(&head, &tail, $1);
-                struct sym *n = add_sym(head, curr_scope, filename, line);
-                add_stg_class(n);
-                n->e.func.complete = 1;
-                print_sym(n, 0);
-                head = (struct ast_node *)NULL;
-                tail = (struct ast_node *)NULL;
+                struct sym *search = NULL;
+                if(head->u.ident.name != NULL){
+                  search = search_all(curr_scope, head->u.ident.name, ID_FUNC);
+                }
+                if(search == NULL){
+                  ast_node_link(&head, &tail, $1);
+                  struct sym *n = add_sym(head, curr_scope, filename, line);
+                  add_stg_class(n);
+                  head = (struct ast_node *)NULL;
+                  tail = (struct ast_node *)NULL;
+                  print_sym(n, 0);
+                } else if(search->e.func.complete == 1){
+                  /* previously defined func */
+                } else{
+                  print_sym(search, 0);
+                  head = (struct ast_node *)NULL;
+                  tail = (struct ast_node *)NULL;
+                }
                 enter_scope(SCOPE_FUNC);
                }  decl_stmt_list '}' {
+                struct sym_tab *tmp = curr_scope;
                 exit_scope();
+                curr_scope->symsE->e.func.complete = 1;
                }
                ;
 
@@ -95,18 +127,16 @@ decl           : decl_specs ';' {}
 decl_specs     : type_spec {
                 $$ = $1;
                }
-               /*| type_spec decl_specs {
+               | type_spec decl_specs {
+                $1->next = $2;
                 $$ = $1;
-               }*/
+               }
                | type_qual {
                 $$ = $1;
                }
                | type_qual decl_specs {
                  $1->next = $2;
                  $$ = $1;
-               }
-               | stg_spec {
-
                }
                | stg_spec decl_specs {
                  $$ = $2;
@@ -170,21 +200,21 @@ type_spec      : VOID {
                  n->u.scalar.type = 302;
                  $$ = n;
                }
-               | LONG LONG {
+               /*| LONG LONG {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 604;
                  $$ = n;
-               }
+               }*/
                | FLOAT {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 296;
                  $$ = n;
                }
-               | LONG DOUBLE {
+               /*| LONG DOUBLE {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 594;
                  $$ = n;
-               }
+               }*/
                | DOUBLE {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 292;
@@ -195,7 +225,7 @@ type_spec      : VOID {
                  n->u.scalar.type = 307;
                  $$ = n;
                }
-               | SIGNED CHAR {
+               /*| SIGNED CHAR {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 595;
                  $$ = n;
@@ -204,17 +234,17 @@ type_spec      : VOID {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 596;
                  $$ = n;
-               }
+               }*/
                | UNSIGNED {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 314;
                  $$ = n;
                }
-               | UNSIGNED INT {
+               /*| UNSIGNED INT {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 615;
                  $$ = n;
-               }
+               }*/
                | _BOOL {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 318;
@@ -230,16 +260,19 @@ type_spec      : VOID {
 type_qual      : CONST {
                 struct ast_node *n = ast_node_alloc(AST_QUAL);
                 n->u.scalar.qual = 288;
+                n->u.scalar.type = 301;
                 $$ = n;
                }
                | RESTRICT {
                  struct ast_node *n = ast_node_alloc(AST_QUAL);
                  n->u.scalar.qual = 304;
+                 n->u.scalar.type = 301;
                  $$ = n;
                }
                | VOLATILE {
                  struct ast_node *n = ast_node_alloc(AST_QUAL);
                  n->u.scalar.qual = 316;
+                 n->u.scalar.type = 301;
                  $$ = n;
                }
                ;
@@ -260,11 +293,7 @@ direct_decl    : IDENT {
                  ast_node_link(&head, &tail, n);
                  $$ = head;
                }
-               | '(' IDENT ')' {
-                 struct ast_node *n = ast_node_alloc(AST_IDENT);
-                 n->u.ident.name = strdup((const char *)$2);
-                 n->u.ident.type = ID_VAR;
-                 ast_node_link(&head, &tail, n);
+               | '(' declarator ')' {
                  $$ = head;
                }
                | direct_decl '[' ']' {
@@ -280,6 +309,10 @@ direct_decl    : IDENT {
                  $$ = head;
                }
                | direct_decl '(' ')' {
+                 $1->u.ident.type = ID_FUNC;
+                 $$ = head;
+               }
+               | direct_decl '(' decl_specs ')' {
                  $1->u.ident.type = ID_FUNC;
                  $$ = head;
                }
@@ -357,7 +390,7 @@ constant_expr  : NUMBER {
 parenthesized_expr  : '(' expr ')'  {$$ = $2;}
                     ;
 
-postfix_expr   : primary_expr
+postfix_expr   : primary_expr {$$ = $1;}
                | subscript_expr
                | component_expr
                | function_call

@@ -10,6 +10,7 @@ struct sym_tab *new_sym_table(int scopetype, int line){
     fprintf(stderr, "No space for new sym table\n");
     exit(1);
   }
+  new_table->parent = NULL;
   new_table->type = scopetype;
   new_table->line = line;
   new_table->symsS = NULL;
@@ -32,7 +33,7 @@ struct sym *new_sym(int type, char *name, struct sym_tab *curr_tab, struct sym *
   newsym->line = line;
   return newsym;
 }
-struct sym *search_ident(struct sym_tab *curr_tab, char *ident, int type){
+struct sym *search_sym(struct sym_tab *curr_tab, char *ident, int type){
   if(curr_tab->symsS != NULL){
     struct sym *curr_sym = curr_tab->symsS;
     struct sym *i = NULL;
@@ -57,6 +58,27 @@ struct sym *search_ident(struct sym_tab *curr_tab, char *ident, int type){
     else
       return NULL;
 }
+
+struct sym *search_all(struct sym_tab *curr_tab, char *ident, int type){
+  struct sym *i;
+  i = search_sym(curr_tab, ident, type);
+  if(i != NULL){
+    return i;
+  } else{
+    while(curr_tab != NULL){
+      if(curr_tab->parent != NULL){
+        i = search_sym(curr_tab->parent, ident, type);
+        if(i != NULL){
+          return i;
+        }
+      } else{
+        return NULL;
+      }
+    }
+  }
+  return NULL;
+}
+
 
 int print_scope(struct sym *entry){
   switch(entry->curr_tab->type){
@@ -97,24 +119,40 @@ int traceback(struct sym *entry){
           case SHORT: printf("SHORT\n"); break;
           case INT: printf("INT\n"); break;
           case LONG: printf("LONG\n"); break;
-          case UNSIGNED: printf("UNSIGNED\n"); break;
-          case CONST: printf("CONST\n"); break;
-          case RESTRICT: printf("RESTRICT\n"); break;
-          case VOLATILE: printf("VOLATILE \n"); break;
-          case 604: printf("LONG LONG\n"); break;
-          case 594: printf("LONG DOUBLE\n"); break;
-          case 595: printf("SIGNED CHAR\n"); break;
-          case 596: printf("UNSIGNED CHAR\n"); break;
-          case 615: printf("UNSIGNED INT\n"); break;
+          case UNSIGNED: {
+            if(n->next != NULL){
+              printf("UNSIGNED\n");
+            } else{
+              printf("UNSIGNED\n");
+              indent++;
+              printf("%.*s", indent, "                                                                              ");
+              printf("INT\n");
+            }
+            break;
+          }
+          case FLOAT: printf("FLOAT\n"); break;
+          case DOUBLE: printf("DOUBLE\n"); break;
+          case VOID: printf("VOID\n"); break;
+          case SIGNED: {
+            if(n->next != NULL){
+              printf("SIGNED\n");
+            } else{
+              printf("SIGNED\n");
+              indent++;
+              printf("%.*s", indent, "                                                                              ");
+              printf("INT\n");
+            }
+            break;
+          }
           default: printf("ERROR: UNKNOWN SCALAR\n"); break;
         }
         break;
       }
       case AST_QUAL: {
         switch(n->u.scalar.qual) {
-          case CONST: printf("CONST "); break;
-          case RESTRICT: printf("RESTRICT "); break;
-          case VOLATILE: printf("VOLATILE "); break;
+          case CONST: printf("CONST\n"); break;
+          case RESTRICT: printf("RESTRICT\n"); break;
+          case VOLATILE: printf("VOLATILE\n"); break;
           default: break;
         }
         break;
@@ -124,7 +162,7 @@ int traceback(struct sym *entry){
         break;
       }
       case AST_ARR: {
-        printf("array with %d elements\n", n->u.arr.num);
+        printf("array with %d elements of type\n", n->u.arr.num);
         break;
       }
       default: {
@@ -150,16 +188,16 @@ int print_stg(int stg){
 int print_sym(struct sym *entry, int step){
   switch(entry->ident){
     case ID_VAR: {
-      printf("%s is defined at %s:%d ", entry->name, entry->fname, entry->line);
+      printf("%s is declared at file %s at line %d ", entry->name, entry->fname, entry->line);
       print_scope(entry);
-      printf("as a variable with stgclass ");
+      printf("as a variable with stg ");
       print_stg(entry->e.var.stg);
       printf("of type:\n");
       traceback(entry);
       break;
     }
     case ID_FUNC: {
-      printf("%s is defined at %s:%d ", entry->name, entry->fname, entry->line);
+      printf("%s is declared at file %s at line %d ", entry->name, entry->fname, entry->line);
       print_scope(entry);
       printf("as a ");
       print_stg(entry->e.func.stg);
@@ -190,7 +228,7 @@ int print_table(struct sym_tab *table){
 //}
 
 struct sym *install_sym(struct sym_tab *curr_tab, struct sym *entry, int line){
-  struct sym *find = search_ident(curr_tab, entry->name, entry->ident);
+  struct sym *find = search_sym(curr_tab, entry->name, entry->ident);
   if(find != NULL){
     return find;
   } else{
@@ -210,11 +248,16 @@ struct sym *add_sym(struct ast_node *node, struct sym_tab *curr_tab, char *fname
     case ID_VAR: {
       struct sym *n = new_sym(ID_VAR, node->u.ident.name, curr_tab, NULL, fname, line);
       struct sym *i = install_sym(curr_tab, n, line);
-      if(i != NULL){
+      if(i != NULL && curr_tab->parent != NULL){
         exit(5);
+      } else if(i != NULL && curr_tab->parent == NULL){
+        i->n = node->next;
+        return i;
+      } else {
+        n->n = node->next;
+        return n;
       }
-      n->n = node->next;
-      return n;
+
     }
     case ID_FUNC: {
       struct sym *n = new_sym(ID_FUNC, node->u.ident.name, curr_tab, NULL, fname, line);

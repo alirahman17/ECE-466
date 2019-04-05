@@ -73,7 +73,8 @@ struct sym_tab *global, *current;
 
 struct sym_tab *new_sym_table(int scopetype, int line);
 struct sym *new_sym(int type, char *name, struct sym_tab *curr_tab, struct sym *next, char *fname, int line);
-struct sym *search_ident(struct sym_tab *curr_tab, char *ident, int type);
+struct sym *search_sym(struct sym_tab *curr_tab, char *ident, int type);
+struct sym *search_all(struct sym_tab *curr_tab, char *ident, int type);
 
 int print_sym(struct sym *entry, int step);
 int print_table(struct sym_tab *table);

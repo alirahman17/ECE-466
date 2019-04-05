@@ -9,3 +9,4 @@ symtest.c
 exprtests.c
 Lexer/*
 Parser/*
+scope1.c
