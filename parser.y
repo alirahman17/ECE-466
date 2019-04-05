@@ -47,7 +47,7 @@ struct sym_tab *curr_scope;
 %type <num.intval> assignment_op
 %type <astn> expr_statement
 %type <astn> decl_func_list decl_func func decl_stmt_list decl_stmt compound_stmt decl decl_specs type_spec type_qual stg_spec direct_decl declarator pointer type_qual_list decl_list
-%type <astn> stmt iter_stmt for_stmt while_stmt init_clause switch_stmt return_stmt continue_stmt break_stmt goto_stmt label
+%type <astn> stmt iter_stmt for_stmt while_stmt init_clause switch_stmt return_stmt continue_stmt break_stmt goto_stmt label named_label case_label labeled_stmt
 
 %left ','
 %right TIMESEQ
@@ -129,6 +129,10 @@ stmt           : expr_statement
                | continue_stmt
                | break_stmt
                | goto_stmt
+               | labeled_stmt
+               | ';' {
+                 /* NULL STATEMENT */
+               }
                ;
 
 switch_stmt    : SWITCH '(' expr ')' stmt {
@@ -154,15 +158,31 @@ break_stmt     : BREAK ';' {
                }
                ;
 
-goto_stmt      : GOTO label ';' {
+goto_stmt      : GOTO named_label ';' {
 
                }
                ;
 
-label          : IDENT {
+named_label    : IDENT {
 
                }
                ;
+
+labeled_stmt   : label ':' stmt {
+
+               }
+               ;
+
+case_label     : CASE conditional_expr {
+
+               }
+               ;
+
+label          : named_label
+               | case_label
+               | DEFAULT
+               ;
+
 
 compound_stmt  : '{' { enter_scope(SCOPE_BLOCK); } decl_stmt_list '}' {
                 exit_scope();
