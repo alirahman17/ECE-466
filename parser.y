@@ -46,7 +46,8 @@ struct sym_tab *curr_scope;
 %type <astn> bit_or_expr bit_xor_expr bit_and_expr log_or_expr log_and_expr conditional_expr assignment_expr expr
 %type <num.intval> assignment_op
 %type <astn> expr_statement
-%type <astn> decl_func_list decl_func func decl_stmt_list decl_stmt compound_stmt decl decl_specs type_spec type_qual stg_spec direct_decl declarator pointer type_qual_list
+%type <astn> decl_func_list decl_func func decl_stmt_list decl_stmt compound_stmt decl decl_specs type_spec type_qual stg_spec direct_decl declarator pointer type_qual_list decl_list
+%type <astn> stmt iter_stmt for_stmt while_stmt init_clause switch_stmt return_stmt continue_stmt break_stmt goto_stmt label
 
 %left ','
 %right TIMESEQ
@@ -103,6 +104,8 @@ func           : decl_specs declarator '{' {
                 struct sym_tab *tmp = curr_scope;
                 exit_scope();
                 curr_scope->symsE->e.func.complete = 1;
+                print_ast($$, 0);
+                /* PRINT AST DUMP FOR FUNC */
                }
                ;
 
@@ -111,7 +114,53 @@ decl_stmt_list : decl_stmt {}
                ;
 
 decl_stmt      : decl {}
-               | expr_statement {
+               | stmt {}
+               ;
+
+init_clause    : expr
+               | decl
+               ;
+
+stmt           : expr_statement
+               | compound_stmt
+               | iter_stmt
+               | switch_stmt
+               | return_stmt
+               | continue_stmt
+               | break_stmt
+               | goto_stmt
+               ;
+
+switch_stmt    : SWITCH '(' expr ')' stmt {
+
+               }
+               ;
+
+return_stmt    : RETURN expr ';' {
+
+               }
+               | RETURN ';' {
+
+               }
+               ;
+
+continue_stmt  : CONTINUE ';' {
+
+               }
+               ;
+
+break_stmt     : BREAK ';' {
+
+               }
+               ;
+
+goto_stmt      : GOTO label ';' {
+
+               }
+               ;
+
+label          : IDENT {
+
                }
                ;
 
@@ -122,6 +171,10 @@ compound_stmt  : '{' { enter_scope(SCOPE_BLOCK); } decl_stmt_list '}' {
 
 decl           : decl_specs ';' {}
                | decl_specs init_decl_list ';' {}
+               ;
+
+decl_list      : decl_specs
+               | decl_list ',' decl_specs
                ;
 
 decl_specs     : type_spec {
@@ -277,6 +330,46 @@ type_qual      : CONST {
                }
                ;
 
+iter_stmt      : while_stmt
+               | for_stmt
+               ;
+
+while_stmt     : WHILE '(' expr ')' stmt {
+
+               }
+               ;
+
+for_stmt       : FOR for_expr stmt {
+
+               }
+               ;
+
+for_expr       : '(' init_clause ';' expr ';' expr ')' {
+
+               }
+               | '(' ';' expr ';' expr ')' {
+
+               }
+               | '(' init_clause ';'  ';' expr ')' {
+
+               }
+               | '(' init_clause ';' expr ';' ')' {
+
+               }
+               | '(' init_clause ';' ';' ')' {
+
+               }
+               | '(' ';' ';' expr ')' {
+
+               }
+               | '(' ';' expr ';' ')' {
+
+               }
+               | '(' ';' ';' ')' {
+
+               }
+               ;
+
 declarator     : direct_decl {
                 $$ = $1;
                }
@@ -312,7 +405,7 @@ direct_decl    : IDENT {
                  $1->u.ident.type = ID_FUNC;
                  $$ = head;
                }
-               | direct_decl '(' decl_specs ')' {
+               | direct_decl '(' decl_list ')' {
                  $1->u.ident.type = ID_FUNC;
                  $$ = head;
                }
@@ -358,7 +451,7 @@ expr_statement : expr ';' {
                 //fprintf(stdout, "\n\n-------------- LINE %d --------------\n", line);
                 //print_ast($$, 0);
                }
-               | compound_stmt {}
+               //| compound_stmt {}
                ;
 
 primary_expr   : IDENT {

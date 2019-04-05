@@ -257,7 +257,6 @@ struct sym *add_sym(struct ast_node *node, struct sym_tab *curr_tab, char *fname
         n->n = node->next;
         return n;
       }
-
     }
     case ID_FUNC: {
       struct sym *n = new_sym(ID_FUNC, node->u.ident.name, curr_tab, NULL, fname, line);
