@@ -360,14 +360,12 @@ iter_stmt      : while_stmt
                ;
 
 while_stmt     : WHILE '(' expr ')' stmt {
-
+                struct ast_node *n = ast_node_alloc(AST_WHILE);
+                n->u.nwhile.expr = $3;
+                n->u.nwhile.body = $5;
+                $$ = n;
                }
                ;
-
-/*for_stmt       : FOR for_expr stmt {
-
-               }
-               ;*/
 
 for_stmt       : FOR '(' init_clause ';' expr ';' expr ')' stmt {
                 struct ast_node *n = ast_node_alloc(AST_FOR);

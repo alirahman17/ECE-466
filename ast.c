@@ -119,6 +119,18 @@ void print_ast(struct ast_node *root, int level){
                         fprintf(stdout, "INCR:\n");
                         print_ast(root->u.nfor.incr, level + 1);
                         break;
+    case AST_WHILE:     fprintf(stdout, "WHILE\n");
+                        fprintf(stdout, "%*s", level + 1, "");
+                        fprintf(stdout, "EXPR\n");
+                        print_ast(root->u.nwhile.expr, level + 2);
+                        fprintf(stdout, "%*s", level, "");
+                        fprintf(stdout, "BODY:\n");
+                        fprintf(stdout, "%*s", level+1, "");
+                        fprintf(stdout, "LIST:\n");
+                        print_ast(root->u.nwhile.body, level + 2);
+                        fprintf(stdout, "%*s", level+1, "");
+                        fprintf(stdout, "}\n");
+                        break;
     case AST_NULL:      fprintf(stdout, "NULL\n");
                         break;
     case AST_SWITCH:    fprintf(stdout, "SWITCH, EXPR\n");
