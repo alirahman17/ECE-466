@@ -113,8 +113,9 @@ func           : decl_specs declarator '{' {
 
 decl_stmt_list : decl_stmt {$$ = $1;}
                | decl_stmt_list decl_stmt {
-                 $1->next = $2;
-                 $$ = $1;
+                 $$ = ast_node_alloc(AST_TOP_EXPR_ST);
+                 $$->u.top_expr_st.left = $1;
+                 $$->u.top_expr_st.right = $2;
                }
                ;
 
@@ -173,29 +174,41 @@ break_stmt     : BREAK ';' {
                ;
 
 goto_stmt      : GOTO named_label ';' {
-
+                struct ast_node *n = ast_node_alloc(AST_GOTO);
+                n->u.ngoto.label = $2;
+                $$ = n;
                }
                ;
 
 named_label    : IDENT {
-
+                struct ast_node *n = ast_node_alloc(AST_LABEL);
+                n->u.nlabel.label = strdup((const char *)$1);
+                n->u.nlabel.icase = 1;
+                $$ = n;
                }
                ;
 
 labeled_stmt   : label ':' stmt {
-
+                struct ast_node *n = ast_node_alloc(AST_LSTMT);
+                n->u.lstmt.label = $1;
+                n->u.lstmt.stmt = $3;
+                $$ = n;
                }
                ;
 
 case_label     : CASE conditional_expr {
-
+                struct ast_node *n = ast_node_alloc(AST_CASE);
+                n->u.lcase.label = $2;
+                $$ = n;
                }
                ;
 
-label          : named_label
-               | case_label
+label          : named_label {$$ = $1;}
+               | case_label {$$ = $1;}
                | DEFAULT {
-                 
+                struct ast_node *n = ast_node_alloc(AST_LABEL);
+                n->u.nlabel.icase = 2;
+                $$ = n;
                }
                ;
 
@@ -498,8 +511,9 @@ expr_statement : expr ';' {
                 //print_ast($$, 0);
                }
                | expr_statement expr ';' {
-                $$ = ast_node_alloc(AST_TOP_EXPR);
-                $$->u.top_expr.left = $2;
+                $$ = ast_node_alloc(AST_TOP_EXPR_ST);
+                $$->u.top_expr_st.left = $1;
+                $$->u.top_expr_st.right = $2;
                 //fprintf(stdout, "\n\n-------------- LINE %d --------------\n", line);
                 //print_ast($$, 0);
                }

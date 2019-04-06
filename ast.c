@@ -11,7 +11,7 @@ struct ast_node * ast_node_alloc(int node_type){
 }
 
 void print_ast(struct ast_node *root, int level){
-  if(root->node_type != AST_EXPR_LIST && root->node_type != AST_TOP_EXPR){
+  if(root->node_type != AST_EXPR_LIST && root->node_type != AST_TOP_EXPR && root->node_type != AST_TOP_EXPR_ST && root->node_type != AST_CASE){
     fprintf(stdout, "%*s", level, "");
   }
 
@@ -65,7 +65,11 @@ void print_ast(struct ast_node *root, int level){
 
     case AST_FUNC:   fprintf(stdout, "FUNCTION CALL\n");
                      print_ast(root->u.func.name, level + 1);
-                     print_ast(root->u.func.args, level + 1);
+                     if(root->u.func.args != NULL){
+                       fprintf(stdout, "%*s", level, "");
+                       fprintf(stdout, "FUNCTION ARGS\n");
+                       print_ast(root->u.func.args, level + 1);
+                     }
                      break;
 
     case AST_SIZEOF: fprintf(stdout, "SIZEOF\n");
@@ -83,6 +87,10 @@ void print_ast(struct ast_node *root, int level){
 
     case AST_TOP_EXPR:  print_ast(root->u.top_expr.left, level);
                         break;
+
+    case AST_TOP_EXPR_ST:  print_ast(root->u.top_expr_st.left, level);
+                           print_ast(root->u.top_expr_st.right, level);
+                           break;
 
     case AST_IF_ELSE:   fprintf(stdout, "IF CONDITION\n");
                         print_ast(root->u.if_else.cond, level + 1);
@@ -115,9 +123,10 @@ void print_ast(struct ast_node *root, int level){
                         break;
     case AST_SWITCH:    fprintf(stdout, "SWITCH, EXPR\n");
                         print_ast(root->u.nswitch.expr, level + 1);
+                        fprintf(stdout, "%*s", level, "");
                         fprintf(stdout, "BODY:\n");
                         fprintf(stdout, "%*s", level+1, "");
-                        fprintf(stdout, "LIST:\n");
+                        fprintf(stdout, "LIST{\n");
                         print_ast(root->u.nswitch.body, level + 2);
                         fprintf(stdout, "%*s", level+1, "");
                         fprintf(stdout, "}\n");
@@ -129,10 +138,33 @@ void print_ast(struct ast_node *root, int level){
                         break;
     case AST_CONTINUE:  fprintf(stdout, "CONTINUE\n");
                         break;
-    default:            print_ast(root->next, level + 1);
+    case AST_GOTO:      fprintf(stdout, "GOTO %s\n", root->u.ngoto.label->u.nlabel.label);
+                        break;
+    case AST_LSTMT:     {
+                          if(root->u.lstmt.label->u.nlabel.icase == 1){
+                            fprintf(stdout, "Label (%s):\n", root->u.lstmt.label->u.nlabel.label);
+                            print_ast(root->u.lstmt.stmt, level + 1);
+                          } else if(root->u.lstmt.label->u.nlabel.icase == 2){
+                            fprintf(stdout, "DEFAULT\n");
+                            print_ast(root->u.lstmt.stmt, level + 1);
+                          } else{
+                            print_ast(root->u.lstmt.label, level + 1);
+                            fprintf(stdout, "%*s", level, "");
+                            fprintf(stdout, "STMT\n");
+                            print_ast(root->u.lstmt.stmt, level + 1);
+                          }
+                        }
+                        break;
+    case AST_CASE:      fprintf(stdout, "CASE\n");
+                        fprintf(stdout, "%*s", level + 1, "");
+                        fprintf(stdout, "EXPR\n");
+                        print_ast(root->u.lcase.label, level + 1);
+                        break;
+    default:            //print_ast(root->next, level + 1);
                         break;
 
   }
+
 }
 
 void ast_node_link(struct ast_node **head, struct ast_node **tail, struct ast_node *ins){

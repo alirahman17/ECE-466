@@ -6,7 +6,11 @@
 #include <string.h>
 #include <errno.h>
 
-enum ast_types {AST_ASSIGN = 1, AST_UNOP, AST_BINOP, AST_NUMBER, AST_IDENT, AST_CHARLIT, AST_STRING, AST_FUNC, AST_SIZEOF, AST_COMP_SELECT, AST_EXPR_LIST, AST_TOP_EXPR, AST_IF_ELSE, AST_SCALAR, AST_ARR, AST_POINTER, AST_QUAL, AST_FOR, AST_NULL, AST_SWITCH, AST_WHILE, AST_RETURN, AST_CONTINUE, AST_BREAK, AST_CASE, AST_LABEL};
+enum ast_types {AST_ASSIGN = 1, AST_UNOP, AST_BINOP, AST_NUMBER, AST_IDENT, AST_CHARLIT,
+  AST_STRING, AST_FUNC, AST_SIZEOF, AST_COMP_SELECT, AST_EXPR_LIST, AST_TOP_EXPR,
+  AST_IF_ELSE, AST_SCALAR, AST_ARR, AST_POINTER, AST_QUAL, AST_FOR, AST_NULL,
+  AST_SWITCH, AST_WHILE, AST_RETURN, AST_CONTINUE, AST_BREAK, AST_CASE, AST_LABEL,
+  AST_TOP_EXPR_ST, AST_GOTO, AST_NLABEL, AST_LSTMT};
 //enum scalar_types {CHAR, SHORT, INT, LONG, UNSIGNED, CONST, RESTRICT, VOLATILE};
 enum num_signs {UNSIGNED_T = 0, SIGNED_T = 1};
 enum num_types {INT_T = 0, LONG_T, LONGLONG_T, DOUBLE_T, LONGDOUBLE_T, FLOAT_T};
@@ -44,6 +48,11 @@ struct node_size{
 
 struct node_top{
   struct ast_node *left;
+};
+
+struct node_top_st{
+  struct ast_node *left;
+  struct ast_node *right;
 };
 
 struct node_unop{
@@ -111,6 +120,24 @@ struct node_while{
   struct ast_node *body;
 };
 
+struct node_goto{
+  struct ast_node *label;
+};
+
+struct node_label{
+  char *label;
+  int icase;
+};
+
+struct node_lstmt{
+  struct ast_node *label;
+  struct ast_node *stmt;
+};
+
+struct node_case{
+  struct ast_node *label;
+};
+
 struct ast_node{
   int node_type;
   union {
@@ -121,6 +148,7 @@ struct ast_node{
     struct node_if_else if_else;
     struct node_size size_of;
     struct node_top top_expr;
+    struct node_top_st top_expr_st;
     struct node_unop unop;
     struct node_binop binop;
     struct node_comp comp_select;
@@ -136,6 +164,10 @@ struct ast_node{
     struct node_switch nswitch;
     struct node_while nwhile;
     struct node_return nreturn;
+    struct node_goto ngoto;
+    struct node_label nlabel;
+    struct node_lstmt lstmt;
+    struct node_case lcase;
   } u;
   struct ast_node *next;
 };
