@@ -11,10 +11,8 @@ struct ast_node * ast_node_alloc(int node_type){
 }
 
 void print_ast(struct ast_node *root, int level){
-  if(root->node_type != AST_EXPR_LIST){
-    for(int i = 0; i < level; i++){
-      fprintf(stdout, "  ");
-    }
+  if(root->node_type != AST_EXPR_LIST && root->node_type != AST_TOP_EXPR){
+    fprintf(stdout, "%*s", level, "");
   }
 
   if(root == NULL){
@@ -27,7 +25,7 @@ void print_ast(struct ast_node *root, int level){
                      print_ast(root->u.assign.right, level + 1);
                      break;
 
-    case AST_UNOP:   fprintf(stdout, "UNARY OP %d", root->u.unop.operator);
+    case AST_UNOP:   fprintf(stdout, "UNARY OP");
                      if(root->u.unop.operator < 255)
                       fprintf(stdout, " (%c)\n",  (unsigned char)root->u.unop.operator);
                      else
@@ -35,7 +33,7 @@ void print_ast(struct ast_node *root, int level){
                      print_ast(root->u.unop.left, level + 1);
                      break;
 
-    case AST_BINOP:  fprintf(stdout, "BINARY OP %d", root->u.binop.operator);
+    case AST_BINOP:  fprintf(stdout, "BINARY OP");
                      if(root->u.binop.operator < 255)
                       fprintf(stdout, " (%c)\n", (unsigned char)root->u.binop.operator);
                      else
@@ -47,7 +45,7 @@ void print_ast(struct ast_node *root, int level){
     case AST_IDENT:  fprintf(stdout, "IDENT %s\n", root->u.ident.name);
                      break;
 
-    case AST_NUMBER: fprintf(stdout, "NUMBER: (numtype = ");
+    case AST_NUMBER: fprintf(stdout, "NUMBER: (type = ");
                      switch(root->u.num.type){
                         case INT_T:   fprintf(stdout, "int) %lld\n", root->u.num.intval);    break;
                         case LONG_T:  fprintf(stdout, "long) %lld\n", root->u.num.intval);   break;
@@ -88,10 +86,52 @@ void print_ast(struct ast_node *root, int level){
 
     case AST_IF_ELSE:   fprintf(stdout, "IF CONDITION\n");
                         print_ast(root->u.if_else.cond, level + 1);
+                        fprintf(stdout, "%*s", level, "");
                         fprintf(stdout, "THEN:\n");
                         print_ast(root->u.if_else.if_true, level + 1);
+                        fprintf(stdout, "%*s", level, "");
                         fprintf(stdout, "ELSE:\n");
                         print_ast(root->u.if_else.if_false, level + 1);
+                        break;
+    case AST_FOR:       fprintf(stdout, "FOR\n");
+                        fprintf(stdout, "%*s", level, "");
+                        fprintf(stdout, "INIT:\n");
+                        print_ast(root->u.nfor.init, level + 1);
+                        fprintf(stdout, "%*s", level, "");
+                        fprintf(stdout, "COND:\n");
+                        print_ast(root->u.nfor.cond, level + 1);
+                        fprintf(stdout, "%*s", level, "");
+                        fprintf(stdout, "BODY:\n");
+                        fprintf(stdout, "%*s", level+1, "");
+                        fprintf(stdout, "LIST:\n");
+                        print_ast(root->u.nfor.body, level + 2);
+                        fprintf(stdout, "%*s", level+1, "");
+                        fprintf(stdout, "}\n");
+                        fprintf(stdout, "%*s", level, "");
+                        fprintf(stdout, "INCR:\n");
+                        print_ast(root->u.nfor.incr, level + 1);
+                        break;
+    case AST_NULL:      fprintf(stdout, "NULL\n");
+                        break;
+    case AST_SWITCH:    fprintf(stdout, "SWITCH, EXPR\n");
+                        print_ast(root->u.nswitch.expr, level + 1);
+                        fprintf(stdout, "BODY:\n");
+                        fprintf(stdout, "%*s", level+1, "");
+                        fprintf(stdout, "LIST:\n");
+                        print_ast(root->u.nswitch.body, level + 2);
+                        fprintf(stdout, "%*s", level+1, "");
+                        fprintf(stdout, "}\n");
+                        break;
+    case AST_RETURN:    fprintf(stdout, "RETURN\n");
+                        print_ast(root->u.nreturn.expr, level + 1);
+                        break;
+    case AST_BREAK:     fprintf(stdout, "BREAK\n");
+                        break;
+    case AST_CONTINUE:  fprintf(stdout, "CONTINUE\n");
+                        break;
+    default:            print_ast(root->next, level + 1);
+                        break;
+
   }
 }
 

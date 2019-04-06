@@ -10,3 +10,6 @@ exprtests.c
 Lexer/*
 Parser/*
 scope1.c
+t3.c
+t1_2.c
+t1.c

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <errno.h>
 
-enum ast_types {AST_ASSIGN = 1, AST_UNOP, AST_BINOP, AST_NUMBER, AST_IDENT, AST_CHARLIT, AST_STRING, AST_FUNC, AST_SIZEOF, AST_COMP_SELECT, AST_EXPR_LIST, AST_TOP_EXPR, AST_IF_ELSE, AST_SCALAR, AST_ARR, AST_POINTER, AST_QUAL};
+enum ast_types {AST_ASSIGN = 1, AST_UNOP, AST_BINOP, AST_NUMBER, AST_IDENT, AST_CHARLIT, AST_STRING, AST_FUNC, AST_SIZEOF, AST_COMP_SELECT, AST_EXPR_LIST, AST_TOP_EXPR, AST_IF_ELSE, AST_SCALAR, AST_ARR, AST_POINTER, AST_QUAL, AST_FOR, AST_NULL, AST_SWITCH, AST_WHILE, AST_RETURN, AST_CONTINUE, AST_BREAK, AST_CASE, AST_LABEL};
 //enum scalar_types {CHAR, SHORT, INT, LONG, UNSIGNED, CONST, RESTRICT, VOLATILE};
 enum num_signs {UNSIGNED_T = 0, SIGNED_T = 1};
 enum num_types {INT_T = 0, LONG_T, LONGLONG_T, DOUBLE_T, LONGDOUBLE_T, FLOAT_T};
@@ -90,6 +90,27 @@ struct node_arr{
   int num;
 };
 
+struct node_for{
+  struct ast_node *init;
+  struct ast_node *cond;
+  struct ast_node *body;
+  struct ast_node *incr;
+};
+
+struct node_switch{
+  struct ast_node *expr;
+  struct ast_node *body;
+};
+
+struct node_return{
+  struct ast_node *expr;
+};
+
+struct node_while{
+  struct ast_node *expr;
+  struct ast_node *body;
+};
+
 struct ast_node{
   int node_type;
   union {
@@ -110,6 +131,11 @@ struct ast_node{
     struct node_scalar scalar;
     struct node_point pointer;
     struct node_arr arr;
+
+    struct node_for nfor;
+    struct node_switch nswitch;
+    struct node_while nwhile;
+    struct node_return nreturn;
   } u;
   struct ast_node *next;
 };

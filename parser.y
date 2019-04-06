@@ -104,57 +104,71 @@ func           : decl_specs declarator '{' {
                 struct sym_tab *tmp = curr_scope;
                 exit_scope();
                 curr_scope->symsE->e.func.complete = 1;
-                print_ast($$, 0);
+                fprintf(stdout, "AST Dump for function %s\n LIST {\n",curr_scope->symsE->name);
+                print_ast($5, 2);
+                fprintf(stdout, " }\n");
                 /* PRINT AST DUMP FOR FUNC */
                }
                ;
 
-decl_stmt_list : decl_stmt {}
-               | decl_stmt_list decl_stmt {}
+decl_stmt_list : decl_stmt {$$ = $1;}
+               | decl_stmt_list decl_stmt {
+                 $1->next = $2;
+                 $$ = $1;
+               }
                ;
 
-decl_stmt      : decl {}
-               | stmt {}
+decl_stmt      : decl {$$ = $1;}
+               | stmt {$$ = $1;}
                ;
 
 init_clause    : expr
                | decl
                ;
 
-stmt           : expr_statement
-               | compound_stmt
-               | iter_stmt
-               | switch_stmt
-               | return_stmt
-               | continue_stmt
-               | break_stmt
-               | goto_stmt
-               | labeled_stmt
+stmt           : expr_statement {$$ = $1;}
+               | compound_stmt {$$ = $1;}
+               | iter_stmt {$$ = $1;}
+               | switch_stmt {$$ = $1;}
+               | return_stmt {$$ = $1;}
+               | continue_stmt {$$ = $1;}
+               | break_stmt {$$ = $1;}
+               | goto_stmt {$$ = $1;}
+               | labeled_stmt {$$ = $1;}
                | ';' {
                  /* NULL STATEMENT */
                }
                ;
 
 switch_stmt    : SWITCH '(' expr ')' stmt {
-
+                struct ast_node *n = ast_node_alloc(AST_SWITCH);
+                n->u.nswitch.expr = $3;
+                n->u.nswitch.body = $5;
+                $$ = n;
                }
                ;
 
 return_stmt    : RETURN expr ';' {
-
+                struct ast_node *n = ast_node_alloc(AST_RETURN);
+                n->u.nreturn.expr = $2;
+                $$ = n;
                }
                | RETURN ';' {
-
+                struct ast_node *n = ast_node_alloc(AST_RETURN);
+                n->u.nreturn.expr = ast_node_alloc(AST_NULL);
+                $$ = n;
                }
                ;
 
 continue_stmt  : CONTINUE ';' {
-
+                struct ast_node *n = ast_node_alloc(AST_CONTINUE);
+                $$ = n;
                }
                ;
 
 break_stmt     : BREAK ';' {
-
+                struct ast_node *n = ast_node_alloc(AST_BREAK);
+                $$ = n;
                }
                ;
 
@@ -180,12 +194,15 @@ case_label     : CASE conditional_expr {
 
 label          : named_label
                | case_label
-               | DEFAULT
+               | DEFAULT {
+                 
+               }
                ;
 
 
 compound_stmt  : '{' { enter_scope(SCOPE_BLOCK); } decl_stmt_list '}' {
                 exit_scope();
+                $$ = $3;
                }
                ;
 
@@ -273,21 +290,11 @@ type_spec      : VOID {
                  n->u.scalar.type = 302;
                  $$ = n;
                }
-               /*| LONG LONG {
-                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
-                 n->u.scalar.type = 604;
-                 $$ = n;
-               }*/
                | FLOAT {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 296;
                  $$ = n;
                }
-               /*| LONG DOUBLE {
-                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
-                 n->u.scalar.type = 594;
-                 $$ = n;
-               }*/
                | DOUBLE {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 292;
@@ -298,26 +305,11 @@ type_spec      : VOID {
                  n->u.scalar.type = 307;
                  $$ = n;
                }
-               /*| SIGNED CHAR {
-                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
-                 n->u.scalar.type = 595;
-                 $$ = n;
-               }
-               | UNSIGNED CHAR {
-                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
-                 n->u.scalar.type = 596;
-                 $$ = n;
-               }*/
                | UNSIGNED {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 314;
                  $$ = n;
                }
-               /*| UNSIGNED INT {
-                 struct ast_node *n = ast_node_alloc(AST_SCALAR);
-                 n->u.scalar.type = 615;
-                 $$ = n;
-               }*/
                | _BOOL {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 318;
@@ -359,34 +351,74 @@ while_stmt     : WHILE '(' expr ')' stmt {
                }
                ;
 
-for_stmt       : FOR for_expr stmt {
+/*for_stmt       : FOR for_expr stmt {
 
                }
-               ;
+               ;*/
 
-for_expr       : '(' init_clause ';' expr ';' expr ')' {
-
+for_stmt       : FOR '(' init_clause ';' expr ';' expr ')' stmt {
+                struct ast_node *n = ast_node_alloc(AST_FOR);
+                n->u.nfor.init = $3;
+                n->u.nfor.cond = $5;
+                n->u.nfor.body = $9;
+                n->u.nfor.incr = $7;
+                $$ = n;
                }
-               | '(' ';' expr ';' expr ')' {
-
+               | FOR '(' ';' expr ';' expr ')' stmt {
+                 struct ast_node *n = ast_node_alloc(AST_FOR);
+                 n->u.nfor.init = ast_node_alloc(AST_NULL);
+                 n->u.nfor.cond = $4;
+                 n->u.nfor.body = $8;
+                 n->u.nfor.incr = $6;
+                 $$ = n;
                }
-               | '(' init_clause ';'  ';' expr ')' {
-
+               | FOR '(' init_clause ';'  ';' expr ')' stmt {
+                 struct ast_node *n = ast_node_alloc(AST_FOR);
+                 n->u.nfor.init = $3;
+                 n->u.nfor.cond = ast_node_alloc(AST_NULL);
+                 n->u.nfor.body = $8;
+                 n->u.nfor.incr = $6;
+                 $$ = n;
                }
-               | '(' init_clause ';' expr ';' ')' {
-
+               | FOR '(' init_clause ';' expr ';' ')' stmt {
+                 struct ast_node *n = ast_node_alloc(AST_FOR);
+                 n->u.nfor.init = $3;
+                 n->u.nfor.cond = $5;
+                 n->u.nfor.body = $8;
+                 n->u.nfor.incr = ast_node_alloc(AST_NULL);
+                 $$ = n;
                }
-               | '(' init_clause ';' ';' ')' {
-
+               | FOR '(' init_clause ';' ';' ')' stmt {
+                 struct ast_node *n = ast_node_alloc(AST_FOR);
+                 n->u.nfor.init = $3;
+                 n->u.nfor.cond = ast_node_alloc(AST_NULL);
+                 n->u.nfor.body = $7;
+                 n->u.nfor.incr = ast_node_alloc(AST_NULL);
+                 $$ = n;
                }
-               | '(' ';' ';' expr ')' {
-
+               | FOR '(' ';' ';' expr ')' stmt {
+                 struct ast_node *n = ast_node_alloc(AST_FOR);
+                 n->u.nfor.init = ast_node_alloc(AST_NULL);
+                 n->u.nfor.cond = ast_node_alloc(AST_NULL);
+                 n->u.nfor.body = $7;
+                 n->u.nfor.incr = $5;
+                 $$ = n;
                }
-               | '(' ';' expr ';' ')' {
-
+               | FOR '(' ';' expr ';' ')' stmt {
+                 struct ast_node *n = ast_node_alloc(AST_FOR);
+                 n->u.nfor.init = ast_node_alloc(AST_NULL);
+                 n->u.nfor.cond = $4;
+                 n->u.nfor.body = $7;
+                 n->u.nfor.incr = ast_node_alloc(AST_NULL);
+                 $$ = n;
                }
-               | '(' ';' ';' ')' {
-
+               | FOR '(' ';' ';' ')' stmt {
+                 struct ast_node *n = ast_node_alloc(AST_FOR);
+                 n->u.nfor.init = ast_node_alloc(AST_NULL);
+                 n->u.nfor.cond = ast_node_alloc(AST_NULL);
+                 n->u.nfor.body = $6;
+                 n->u.nfor.incr = ast_node_alloc(AST_NULL);
+                 $$ = n;
                }
                ;
 
@@ -812,7 +844,9 @@ conditional_expr : log_or_expr
                  }
                  ;
 
-assignment_expr :  conditional_expr
+                 /* INSERT IF and IF-ELSE STATEMENTS HERE */
+
+assignment_expr :  conditional_expr {}
                 |  unary_expr assignment_op assignment_expr {
                  $$ = ast_node_alloc(AST_ASSIGN);
                  $$->u.assign.left = $1;
@@ -836,7 +870,6 @@ assignment_expr :  conditional_expr
                   binop->u.binop.right = $3;
                   $$->u.assign.right = binop;
                  }
-                 print_ast($$, 0);
                 }
                 ;
 
@@ -853,7 +886,7 @@ assignment_op  : '='      {$$ = '=';}
                | OREQ     {$$ = OREQ;}
                ;
 
-expr           : assignment_expr
+expr           : assignment_expr {/*print_ast($$, 0);*/}
                | expr ',' assignment_expr {
                  $$ = ast_node_alloc(AST_EXPR_LIST);
                  $$->u.expr_list.omember = $1;
