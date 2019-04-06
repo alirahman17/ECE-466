@@ -39,12 +39,7 @@ struct sym *search_sym(struct sym_tab *curr_tab, char *ident, int type){
     struct sym *i = NULL;
     while(curr_sym != NULL){
       if(!strcmp(curr_sym->name, ident)){
-        switch(type){
-          default: {
-            i = curr_sym;
-            break;
-          }
-        }
+        i = curr_sym;
         break;
       }
       curr_sym = curr_sym->next;
@@ -65,16 +60,14 @@ struct sym *search_all(struct sym_tab *curr_tab, char *ident, int type){
   if(i != NULL){
     return i;
   } else{
-    while(curr_tab != NULL){
       if(curr_tab->parent != NULL){
-        i = search_sym(curr_tab->parent, ident, type);
+        i = search_all(curr_tab->parent, ident, type);
         if(i != NULL){
           return i;
         }
       } else{
         return NULL;
       }
-    }
   }
   return NULL;
 }

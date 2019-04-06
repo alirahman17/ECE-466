@@ -42,8 +42,18 @@ void print_ast(struct ast_node *root, int level){
                      print_ast(root->u.binop.right, level + 1);
                      break;
 
-    case AST_IDENT:  fprintf(stdout, "IDENT %s\n", root->u.ident.name);
-                     break;
+    case AST_IDENT:  {
+                       if(root->u.ident.fname == NULL){
+                        fprintf(stderr, "ERROR: Unknown symbol %s\n", root->u.ident.name);
+                        exit(-5);
+                       }
+                       if(root->u.ident.fntype == 1){
+                         fprintf(stdout, "stab_fn %s def @%s:%d\n", root->u.ident.name, root->u.ident.fname, root->u.ident.line);
+                       } else {
+                         fprintf(stdout, "stab_var %s def @%s:%d\n", root->u.ident.name, root->u.ident.fname, root->u.ident.line);
+                       }
+                       break;
+                     }
 
     case AST_NUMBER: fprintf(stdout, "NUMBER: (type = ");
                      switch(root->u.num.type){

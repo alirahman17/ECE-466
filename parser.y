@@ -13,7 +13,9 @@ char* print_kw(int token);
 int add_stg_class(struct sym *entry);
 int enter_scope(int type);
 int exit_scope();
+int id_type = 0;
 int stg;
+struct ast_node *identi;
 struct ast_node *head;
 struct ast_node *tail;
 struct sym_tab *curr_scope;
@@ -80,7 +82,7 @@ decl_func      : decl_stmt {}
                | func {}
                ;
 
-func           : decl_specs declarator '{' {
+func           : decl_specs declarator {
                 struct sym *search = NULL;
                 if(head->u.ident.name != NULL){
                   search = search_all(curr_scope, head->u.ident.name, ID_FUNC);
@@ -100,7 +102,7 @@ func           : decl_specs declarator '{' {
                   tail = (struct ast_node *)NULL;
                 }
                 enter_scope(SCOPE_FUNC);
-               }  decl_stmt_list '}' {
+               } '{'  decl_stmt_list '}' {
                 struct sym_tab *tmp = curr_scope;
                 exit_scope();
                 curr_scope->symsE->e.func.complete = 1;
@@ -213,7 +215,9 @@ label          : named_label {$$ = $1;}
                ;
 
 
-compound_stmt  : '{' { enter_scope(SCOPE_BLOCK); } decl_stmt_list '}' {
+compound_stmt  : {
+                enter_scope(SCOPE_BLOCK);
+               } '{' decl_stmt_list '}' {
                 exit_scope();
                 $$ = $3;
                }
@@ -519,8 +523,20 @@ expr_statement : expr ';' {
                ;
 
 primary_expr   : IDENT {
-                        $$ = ast_node_alloc(AST_IDENT);
-                        $$->u.ident.name = yylval.ident.name;
+                          struct sym *n = search_all(curr_scope, (char *)$1, ID_VAR);
+                          if(n != NULL){
+                            $$ = ast_node_alloc(AST_IDENT);
+                            $$->u.ident.name = strdup((char *)$1);
+                            $$->u.ident.fntype = 0;
+                            $$->u.ident.fname = strdup(n->fname);
+                            $$->u.ident.line = n->line;
+                          } else {
+                            $$ = ast_node_alloc(AST_IDENT);
+                            $$->u.ident.name = strdup((char *)$1);
+                            $$->u.ident.fntype = 0;
+                          }
+                          identi = $$;
+                          id_type = 0;
                }
                | constant_expr
                | parenthesized_expr
@@ -550,7 +566,7 @@ parenthesized_expr  : '(' expr ')'  {$$ = $2;}
 postfix_expr   : primary_expr {$$ = $1;}
                | subscript_expr
                | component_expr
-               | function_call
+               | function_call {id_type = 1;}
                | postincrement_expr
                | postdecrement_expr
                ;
@@ -583,15 +599,19 @@ component_expr : postfix_expr '.' IDENT {
                }
                ;
 
-function_call  : postfix_expr '(' ')' {
-                $$ = ast_node_alloc(AST_FUNC);
-                $$->u.func.name = $1;
-                $$->u.func.args = NULL;
+function_call  :  postfix_expr '(' ')' {
+                    identi->u.ident.fntype = 1;
+                    id_type = 1;
+                    $$ = ast_node_alloc(AST_FUNC);
+                    $$->u.func.name = $1;
+                    $$->u.func.args = NULL;
                }
-               | postfix_expr '(' expr_list ')' {
-                $$ = ast_node_alloc(AST_FUNC);
-                $$->u.func.name = $1;
-                $$->u.func.args = $3;
+               |  postfix_expr '(' expr_list ')' {
+                   identi->u.ident.fntype = 1;
+                   id_type = 1;
+                   $$ = ast_node_alloc(AST_FUNC);
+                   $$->u.func.name = $1;
+                   $$->u.func.args = $3;
                }
                ;
 
@@ -621,7 +641,22 @@ postdecrement_expr : postfix_expr MINUSMINUS {
 cast_expr      : unary_expr
                ;
 
-unary_expr     : postfix_expr
+unary_expr     : postfix_expr {
+                  if(identi->u.ident.fntype == 0 && id_type == 0){
+                    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_VAR);
+
+                  } else{
+                    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_FUNC);
+                    if(n != NULL){
+
+                    } else{
+                      identi->u.ident.line = line;
+                      identi->u.ident.fname = strdup(filename);
+                      add_sym(identi, curr_scope, filename, line);
+                    }
+
+                  } id_type = 0;
+                }
                | sizeof_expr
                | unary_minus
                | unary_plus
@@ -898,7 +933,7 @@ assignment_op  : '='      {$$ = '=';}
                | OREQ     {$$ = OREQ;}
                ;
 
-expr           : assignment_expr {/*print_ast($$, 0);*/}
+expr           : assignment_expr { id_type = 0;/*print_ast($$, 0);*/}
                | expr ',' assignment_expr {
                  $$ = ast_node_alloc(AST_EXPR_LIST);
                  $$->u.expr_list.omember = $1;

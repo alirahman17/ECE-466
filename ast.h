@@ -18,6 +18,9 @@ enum num_types {INT_T = 0, LONG_T, LONGLONG_T, DOUBLE_T, LONGDOUBLE_T, FLOAT_T};
 struct node_ident{
   char *name;
   int type;
+  int line;
+  char *fname;
+  int fntype;
 };
 
 struct node_charlit{
@@ -74,6 +77,9 @@ struct node_comp{
 struct node_func{
   struct ast_node *name;
   struct ast_node *args;
+  int type;
+  int line;
+  char *fname;
 };
 
 struct node_expr_list{
