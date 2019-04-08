@@ -14,8 +14,10 @@ int add_stg_class(struct sym *entry);
 int enter_scope(int type);
 int exit_scope();
 int id_type = 0;
+int fn_type = 0;
+int counter,count_old;
 int stg;
-struct ast_node *identi;
+struct ast_node *identi = NULL;
 struct ast_node *head;
 struct ast_node *tail;
 struct sym_tab *curr_scope;
@@ -138,9 +140,9 @@ stmt           : expr_statement {$$ = $1;}
                | break_stmt {$$ = $1;}
                | goto_stmt {$$ = $1;}
                | labeled_stmt {$$ = $1;}
-               | ';' {
-                 /* NULL STATEMENT */
-               }
+               /*| ';' {
+                  NULL STATEMENT
+               }*/
                ;
 
 switch_stmt    : SWITCH '(' expr ')' stmt {
@@ -523,20 +525,33 @@ expr_statement : expr ';' {
                ;
 
 primary_expr   : IDENT {
+                          //fprintf(stderr, "IDENT: %s\n",(char *)$1);
                           struct sym *n = search_all(curr_scope, (char *)$1, ID_VAR);
+                          struct sym *n2 = search_all(curr_scope, (char *)$1, ID_FUNC);
                           if(n != NULL){
-                            $$ = ast_node_alloc(AST_IDENT);
+                            struct ast_node *tmp = ast_node_alloc(AST_IDENT);
+                            $$ = tmp;
                             $$->u.ident.name = strdup((char *)$1);
                             $$->u.ident.fntype = 0;
                             $$->u.ident.fname = strdup(n->fname);
                             $$->u.ident.line = n->line;
+                          } else if(n2 != NULL){
+                            struct ast_node *tmp = ast_node_alloc(AST_IDENT);
+                            $$ = tmp;
+                            $$->u.ident.name = strdup((char *)$1);
+                            $$->u.ident.fntype = 0;
+                            $$->u.ident.fname = strdup(n2->fname);
+                            $$->u.ident.line = n2->line;
                           } else {
-                            $$ = ast_node_alloc(AST_IDENT);
+                            struct ast_node *tmp = ast_node_alloc(AST_IDENT);
+                            $$ = tmp;
                             $$->u.ident.name = strdup((char *)$1);
                             $$->u.ident.fntype = 0;
                           }
+                          $$->prev = identi;
                           identi = $$;
                           id_type = 0;
+                          counter++;
                }
                | constant_expr
                | parenthesized_expr
@@ -607,8 +622,7 @@ function_call  :  postfix_expr '(' ')' {
                     $$->u.func.args = NULL;
                }
                |  postfix_expr '(' expr_list ')' {
-                   identi->u.ident.fntype = 1;
-                   id_type = 1;
+                   id_type = 3;
                    $$ = ast_node_alloc(AST_FUNC);
                    $$->u.func.name = $1;
                    $$->u.func.args = $3;
@@ -642,20 +656,7 @@ cast_expr      : unary_expr
                ;
 
 unary_expr     : postfix_expr {
-                  if(identi->u.ident.fntype == 0 && id_type == 0){
-                    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_VAR);
 
-                  } else{
-                    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_FUNC);
-                    if(n != NULL){
-
-                    } else{
-                      identi->u.ident.line = line;
-                      identi->u.ident.fname = strdup(filename);
-                      add_sym(identi, curr_scope, filename, line);
-                    }
-
-                  } id_type = 0;
                 }
                | sizeof_expr
                | unary_minus
@@ -893,7 +894,47 @@ conditional_expr : log_or_expr
 
                  /* INSERT IF and IF-ELSE STATEMENTS HERE */
 
-assignment_expr :  conditional_expr {}
+assignment_expr :  conditional_expr {
+  while(counter != 1){
+    //fprintf(stderr, "Counter %d: %s\n", counter, identi->u.ident.name);
+    identi = identi->prev;
+    counter--;
+  }
+  //fprintf(stderr, "%s DEF, COUNT %d OLD %d\n", identi->u.ident.name, counter, count_old);
+  if(identi->u.ident.fntype == 0 && id_type == 0){
+    //fprintf(stderr, "%s DEF 1\n\n", identi->u.ident.name);
+    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_VAR);
+    id_type = 0;
+  } else if(id_type == 3 && identi->u.ident.fntype == 0){
+        //fprintf(stderr, "%s DEF 2\n\n", identi->u.ident.name);
+    id_type = 3;
+  } else if(id_type == 3 && identi->u.ident.fntype == 1){
+        //fprintf(stderr, "%s DEF 3\n\n", identi->u.ident.name);
+    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_FUNC);
+    if(n != NULL){
+      identi->u.ident.fntype = 1;
+    } else{
+      identi->u.ident.fntype = 1;
+      identi->u.ident.line = line;
+      identi->u.ident.fname = strdup(filename);
+      add_sym(identi, curr_scope, filename, line);
+    }
+    id_type = 0;
+  } else {
+      //fprintf(stderr, "%s DEF 4\n\n", identi->u.ident.name);
+    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_FUNC);
+    if(n != NULL){
+      identi->u.ident.fntype = 1;
+    } else{
+      identi->u.ident.fntype = 1;
+      identi->u.ident.line = line;
+      identi->u.ident.fname = strdup(filename);
+      add_sym(identi, curr_scope, filename, line);
+    }
+    id_type = 0;
+  }
+  //count_old = counter;
+}
                 |  unary_expr assignment_op assignment_expr {
                  $$ = ast_node_alloc(AST_ASSIGN);
                  $$->u.assign.left = $1;
@@ -933,7 +974,7 @@ assignment_op  : '='      {$$ = '=';}
                | OREQ     {$$ = OREQ;}
                ;
 
-expr           : assignment_expr { id_type = 0;/*print_ast($$, 0);*/}
+expr           : assignment_expr { counter = 0; count_old = 0;/*print_ast($$, 0);*/}
                | expr ',' assignment_expr {
                  $$ = ast_node_alloc(AST_EXPR_LIST);
                  $$->u.expr_list.omember = $1;

@@ -176,6 +176,7 @@ struct ast_node{
     struct node_case lcase;
   } u;
   struct ast_node *next;
+  struct ast_node *prev;
 };
 
 struct ast_node *ast_node_alloc(int node_type);
