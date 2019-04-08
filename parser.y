@@ -531,6 +531,20 @@ type_qual_list : type_qual {
                ;
 
 expr_statement : expr ';' {
+  while(identi != NULL){
+    if(identi->u.ident.fntype == 1){
+      struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_FUNC);
+      if(n != NULL){
+        identi->u.ident.line = n->line;
+        identi->u.ident.fname = n->fname;
+      } else {
+        identi->u.ident.line = line;
+        identi->u.ident.fname = strdup(filename);
+        add_sym(identi, curr_scope, filename, line);
+      }
+    }
+    identi = identi->prev;
+  }
                 $$ = ast_node_alloc(AST_TOP_EXPR);
                 $$->u.top_expr.left = $1;
                 //fprintf(stdout, "\n\n-------------- LINE %d --------------\n", line);
@@ -570,6 +584,7 @@ primary_expr   : IDENT {
                             $$->u.ident.name = strdup((char *)$1);
                             $$->u.ident.fntype = 0;
                           }
+                          fprintf(stderr, "ID %s\n",  (char *)$1);
                           $$->prev = identi;
                           identi = $$;
                           id_type = 0;
@@ -651,8 +666,19 @@ function_call  :  postfix_expr '(' ')' {
                }
                ;
 
-expr_list      : assignment_expr
+expr_list      : assignment_expr {
+                //fprintf(stderr, "ARG, COUNTOLD %d, COUNTER %d\n",  count_old, counter);
+                if(counter > count_old + 1){
+                  //fprintf(stderr, "PNAME %s\n",  identi->prev->u.ident.name);
+                  identi->prev->u.ident.fntype = 1;
+                } else{
+                  //fprintf(stderr, "NAME %s\n",  identi->u.ident.name);
+                  identi->u.ident.fntype = 1;
+                }
+                count_old = counter;
+               }
                | expr_list ',' assignment_expr {
+                //fprintf(stderr, "ARG, COUNT %d\n",  counter);
                 $$ = ast_node_alloc(AST_EXPR_LIST);
                 $$->u.expr_list.omember = $1;
                 $$->u.expr_list.nmember = $3;
@@ -916,47 +942,7 @@ conditional_expr : log_or_expr
 
                  /* INSERT IF and IF-ELSE STATEMENTS HERE */
 
-assignment_expr :  conditional_expr {
-  while(counter != 1){
-    //fprintf(stderr, "Counter %d: %s\n", counter, identi->u.ident.name);
-    identi = identi->prev;
-    counter--;
-  }
-  //fprintf(stderr, "%s DEF, COUNT %d OLD %d\n", identi->u.ident.name, counter, count_old);
-  if(identi->u.ident.fntype == 0 && id_type == 0){
-    //fprintf(stderr, "%s DEF 1\n\n", identi->u.ident.name);
-    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_VAR);
-    id_type = 0;
-  } else if(id_type == 3 && identi->u.ident.fntype == 0){
-        //fprintf(stderr, "%s DEF 2\n\n", identi->u.ident.name);
-    id_type = 3;
-  } else if(id_type == 3 && identi->u.ident.fntype == 1){
-        //fprintf(stderr, "%s DEF 3\n\n", identi->u.ident.name);
-    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_FUNC);
-    if(n != NULL){
-      identi->u.ident.fntype = 1;
-    } else{
-      identi->u.ident.fntype = 1;
-      identi->u.ident.line = line;
-      identi->u.ident.fname = strdup(filename);
-      add_sym(identi, curr_scope, filename, line);
-    }
-    id_type = 0;
-  } else {
-      //fprintf(stderr, "%s DEF 4\n\n", identi->u.ident.name);
-    struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_FUNC);
-    if(n != NULL){
-      identi->u.ident.fntype = 1;
-    } else{
-      identi->u.ident.fntype = 1;
-      identi->u.ident.line = line;
-      identi->u.ident.fname = strdup(filename);
-      add_sym(identi, curr_scope, filename, line);
-    }
-    id_type = 0;
-  }
-  //count_old = counter;
-}
+assignment_expr :  conditional_expr {}
                 |  unary_expr assignment_op assignment_expr {
                  $$ = ast_node_alloc(AST_ASSIGN);
                  $$->u.assign.left = $1;
@@ -996,7 +982,7 @@ assignment_op  : '='      {$$ = '=';}
                | OREQ     {$$ = OREQ;}
                ;
 
-expr           : assignment_expr { counter = 0; count_old = 0;/*print_ast($$, 0);*/}
+expr           : assignment_expr {  counter = 0; count_old = 0;/*print_ast($$, 0);*/}
                | expr ',' assignment_expr {
                  $$ = ast_node_alloc(AST_EXPR_LIST);
                  $$->u.expr_list.omember = $1;
