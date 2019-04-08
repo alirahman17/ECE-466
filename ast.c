@@ -182,6 +182,21 @@ void print_ast(struct ast_node *root, int level){
                         fprintf(stdout, "EXPR\n");
                         print_ast(root->u.lcase.label, level + 1);
                         break;
+    case AST_IF:        fprintf(stdout, "IF:\n");
+                        print_ast(root->u.nif.expr, level + 1);
+                        fprintf(stdout, "%*s", level, "");
+                        fprintf(stdout, "THEN:\n");
+                        print_ast(root->u.nif.stmt, level + 1);
+                        break;
+    case AST_IF_T_ELSE: fprintf(stdout, "IF:\n");
+                        print_ast(root->u.if_t_else.expr, level + 1);
+                        fprintf(stdout, "%*s", level, "");
+                        fprintf(stdout, "THEN:\n");
+                        print_ast(root->u.if_t_else.tstmt, level + 1);
+                        fprintf(stdout, "%*s", level, "");
+                        fprintf(stdout, "ELSE:\n");
+                        print_ast(root->u.if_t_else.estmt, level + 1);
+                        break;
     default:            //print_ast(root->next, level + 1);
                         break;
 

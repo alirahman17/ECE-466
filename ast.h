@@ -10,7 +10,7 @@ enum ast_types {AST_ASSIGN = 1, AST_UNOP, AST_BINOP, AST_NUMBER, AST_IDENT, AST_
   AST_STRING, AST_FUNC, AST_SIZEOF, AST_COMP_SELECT, AST_EXPR_LIST, AST_TOP_EXPR,
   AST_IF_ELSE, AST_SCALAR, AST_ARR, AST_POINTER, AST_QUAL, AST_FOR, AST_NULL,
   AST_SWITCH, AST_WHILE, AST_RETURN, AST_CONTINUE, AST_BREAK, AST_CASE, AST_LABEL,
-  AST_TOP_EXPR_ST, AST_GOTO, AST_NLABEL, AST_LSTMT};
+  AST_TOP_EXPR_ST, AST_GOTO, AST_NLABEL, AST_LSTMT, AST_IF, AST_IF_T_ELSE};
 //enum scalar_types {CHAR, SHORT, INT, LONG, UNSIGNED, CONST, RESTRICT, VOLATILE};
 enum num_signs {UNSIGNED_T = 0, SIGNED_T = 1};
 enum num_types {INT_T = 0, LONG_T, LONGLONG_T, DOUBLE_T, LONGDOUBLE_T, FLOAT_T};
@@ -144,6 +144,17 @@ struct node_case{
   struct ast_node *label;
 };
 
+struct node_if{
+  struct ast_node *expr;
+  struct ast_node *stmt;
+};
+
+struct node_if_t_e{
+  struct ast_node *expr;
+  struct ast_node *tstmt;
+  struct ast_node *estmt;
+};
+
 struct ast_node{
   int node_type;
   union {
@@ -174,6 +185,8 @@ struct ast_node{
     struct node_label nlabel;
     struct node_lstmt lstmt;
     struct node_case lcase;
+    struct node_if nif;
+    struct node_if_t_e if_t_else;
   } u;
   struct ast_node *next;
   struct ast_node *prev;

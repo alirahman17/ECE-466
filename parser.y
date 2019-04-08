@@ -51,7 +51,7 @@ struct sym_tab *curr_scope;
 %type <num.intval> assignment_op
 %type <astn> expr_statement
 %type <astn> decl_func_list decl_func func decl_stmt_list decl_stmt compound_stmt decl decl_specs type_spec type_qual stg_spec direct_decl declarator pointer type_qual_list decl_list
-%type <astn> stmt iter_stmt for_stmt while_stmt init_clause switch_stmt return_stmt continue_stmt break_stmt goto_stmt label named_label case_label labeled_stmt
+%type <astn> stmt iter_stmt for_stmt while_stmt init_clause switch_stmt return_stmt continue_stmt break_stmt goto_stmt label named_label case_label labeled_stmt cond_stmt if_stmt if_else_stmt
 
 %left ','
 %right TIMESEQ
@@ -140,9 +140,31 @@ stmt           : expr_statement {$$ = $1;}
                | break_stmt {$$ = $1;}
                | goto_stmt {$$ = $1;}
                | labeled_stmt {$$ = $1;}
-               /*| ';' {
-                  NULL STATEMENT
-               }*/
+               | cond_stmt {$$ = $1;}
+               |';' {
+                  //NULL STATEMENT
+               }
+               ;
+
+cond_stmt      : if_stmt {$$ = $1;}
+               | if_else_stmt {$$ = $1;}
+               ;
+
+if_stmt        : IF '(' expr ')' stmt {
+                struct ast_node *n = ast_node_alloc(AST_IF);
+                n->u.nif.expr = $3;
+                n->u.nif.stmt = $5;
+                $$ = n;
+               }
+               ;
+
+if_else_stmt   : IF '(' expr ')' stmt ELSE stmt {
+                struct ast_node *n = ast_node_alloc(AST_IF_T_ELSE);
+                n->u.if_t_else.expr = $3;
+                n->u.if_t_else.tstmt = $5;
+                n->u.if_t_else.estmt = $7;
+                $$ = n;
+               }
                ;
 
 switch_stmt    : SWITCH '(' expr ')' stmt {
@@ -514,13 +536,13 @@ expr_statement : expr ';' {
                 //fprintf(stdout, "\n\n-------------- LINE %d --------------\n", line);
                 //print_ast($$, 0);
                }
-               | expr_statement expr ';' {
+               /*| expr_statement expr ';' {
                 $$ = ast_node_alloc(AST_TOP_EXPR_ST);
                 $$->u.top_expr_st.left = $1;
                 $$->u.top_expr_st.right = $2;
                 //fprintf(stdout, "\n\n-------------- LINE %d --------------\n", line);
                 //print_ast($$, 0);
-               }
+               }*/
                //| compound_stmt {}
                ;
 
