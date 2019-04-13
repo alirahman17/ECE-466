@@ -16,3 +16,4 @@ t1.c
 t2.c
 t4.c
 symtests/t5.c
+output.c

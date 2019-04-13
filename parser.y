@@ -15,7 +15,7 @@ int enter_scope(int type);
 int exit_scope();
 int id_type = 0;
 int fn_type = 0;
-int counter,count_old;
+int numargs, decl;
 int stg;
 struct ast_node *identi = NULL;
 struct ast_node *head;
@@ -41,6 +41,9 @@ struct sym_tab *curr_scope;
   struct ast_node *astn;
 }
 
+%left IF
+%left ELSE
+
 %token <num.intval> IDENT CHARLIT STRING NUMBER INDSEL PLUSPLUS MINUSMINUS SHL SHR LTEQ GTEQ EQEQ NOTEQ LOGAND LOGOR ELLIPSIS TIMESEQ DIVEQ MODEQ PLUSEQ MINUSEQ SHLEQ SHREQ ANDEQ OREQ XOREQ AUTO BREAK CASE CHAR CONST CONTINUE DEFAULT DO DOUBLE ELSE ENUM EXTERN FLOAT FOR GOTO IF INLINE INT LONG REGISTER RESTRICT RETURN SHORT SIGNED SIZEOF STATIC STRUCT SWITCH TYPEDEF UNION UNSIGNED VOID VOLATILE WHILE _BOOL _COMPLEX _IMAGINARY
 
 %type <astn> primary_expr constant_expr parenthesized_expr
@@ -52,6 +55,7 @@ struct sym_tab *curr_scope;
 %type <astn> expr_statement
 %type <astn> decl_func_list decl_func func decl_stmt_list decl_stmt compound_stmt decl decl_specs type_spec type_qual stg_spec direct_decl declarator pointer type_qual_list decl_list
 %type <astn> stmt iter_stmt for_stmt while_stmt init_clause switch_stmt return_stmt continue_stmt break_stmt goto_stmt label named_label case_label labeled_stmt cond_stmt if_stmt if_else_stmt
+
 
 %left ','
 %right TIMESEQ
@@ -109,7 +113,7 @@ func           : decl_specs declarator {
                 exit_scope();
                 curr_scope->symsE->e.func.complete = 1;
                 fprintf(stdout, "AST Dump for function %s\n LIST {\n",curr_scope->symsE->name);
-                print_ast($5, 2);
+                print_ast($5, 2, 0, tmp);
                 fprintf(stdout, " }\n");
                 /* PRINT AST DUMP FOR FUNC */
                }
@@ -150,7 +154,7 @@ cond_stmt      : if_stmt {$$ = $1;}
                | if_else_stmt {$$ = $1;}
                ;
 
-if_stmt        : IF '(' expr ')' stmt {
+if_stmt        : IF '(' expr ')' stmt %prec IF{
                 struct ast_node *n = ast_node_alloc(AST_IF);
                 n->u.nif.expr = $3;
                 n->u.nif.stmt = $5;
@@ -158,7 +162,7 @@ if_stmt        : IF '(' expr ')' stmt {
                }
                ;
 
-if_else_stmt   : IF '(' expr ')' stmt ELSE stmt {
+if_else_stmt   : IF '(' expr ')' stmt ELSE stmt %prec ELSE{
                 struct ast_node *n = ast_node_alloc(AST_IF_T_ELSE);
                 n->u.if_t_else.expr = $3;
                 n->u.if_t_else.tstmt = $5;
@@ -216,6 +220,8 @@ named_label    : IDENT {
 
 labeled_stmt   : label ':' stmt {
                 struct ast_node *n = ast_node_alloc(AST_LSTMT);
+                $1->u.nlabel.line = line;
+                $1->u.nlabel.fname = filename;
                 n->u.lstmt.label = $1;
                 n->u.lstmt.stmt = $3;
                 $$ = n;
@@ -281,6 +287,7 @@ init_decl_list : declarator {
                 print_sym(n, 0);
                 head = (struct ast_node *)NULL;
                 tail = (struct ast_node *)NULL;
+                decl = 0;
                }
                | init_decl_list ',' declarator {
                  ast_node_link(&head, &tail,$<astn>0);
@@ -289,6 +296,7 @@ init_decl_list : declarator {
                  print_sym(n, 0);
                  head = (struct ast_node *)NULL;
                  tail = (struct ast_node *)NULL;
+                 decl = 0;
                }
                ;
 
@@ -312,9 +320,14 @@ type_spec      : VOID {
                 $$ = n;
                }
                | CHAR {
+                 if(decl == 1){
+                   fprintf(stderr, "ERROR: Previously Conflicted Declared Type!\n");
+                   exit(-6);
+                 }
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 287;
                  $$ = n;
+                 decl = 1;
                }
                | SHORT {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
@@ -322,24 +335,47 @@ type_spec      : VOID {
                  $$ = n;
                }
                | INT {
+                 if(decl == 1){
+                   fprintf(stderr, "ERROR: Previously Conflicted Declared Type!\n");
+                   exit(-6);
+                 }
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 301;
                  $$ = n;
+                 decl = 1;
                }
                | LONG {
+                 if(decl == 0){
+                   decl = 3;
+                 } else if(decl == 3){
+                   decl == 2;
+                 } else if(decl == 2){
+                   fprintf(stderr, "ERROR: Previously Conflicted Declared Type LONG LONG LONG!\n");
+                   exit(-6);
+                 }
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 302;
                  $$ = n;
                }
                | FLOAT {
+                 if(decl == 1){
+                   fprintf(stderr, "ERROR: Previously Conflicted Declared Type!\n");
+                   exit(-6);
+                 }
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 296;
                  $$ = n;
+                 decl = 1;
                }
                | DOUBLE {
+                 if(decl == 1){
+                   fprintf(stderr, "ERROR: Previously Conflicted Declared Type!\n");
+                   exit(-6);
+                 }
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
                  n->u.scalar.type = 292;
                  $$ = n;
+                 decl = 1;
                }
                | SIGNED {
                  struct ast_node *n = ast_node_alloc(AST_SCALAR);
@@ -531,20 +567,6 @@ type_qual_list : type_qual {
                ;
 
 expr_statement : expr ';' {
-  while(identi != NULL){
-    if(identi->u.ident.fntype == 1){
-      struct sym *n = search_all(curr_scope, identi->u.ident.name, ID_FUNC);
-      if(n != NULL){
-        identi->u.ident.line = n->line;
-        identi->u.ident.fname = n->fname;
-      } else {
-        identi->u.ident.line = line;
-        identi->u.ident.fname = strdup(filename);
-        add_sym(identi, curr_scope, filename, line);
-      }
-    }
-    identi = identi->prev;
-  }
                 $$ = ast_node_alloc(AST_TOP_EXPR);
                 $$->u.top_expr.left = $1;
                 //fprintf(stdout, "\n\n-------------- LINE %d --------------\n", line);
@@ -562,33 +584,11 @@ expr_statement : expr ';' {
 
 primary_expr   : IDENT {
                           //fprintf(stderr, "IDENT: %s\n",(char *)$1);
-                          struct sym *n = search_all(curr_scope, (char *)$1, ID_VAR);
-                          struct sym *n2 = search_all(curr_scope, (char *)$1, ID_FUNC);
-                          if(n != NULL){
-                            struct ast_node *tmp = ast_node_alloc(AST_IDENT);
-                            $$ = tmp;
-                            $$->u.ident.name = strdup((char *)$1);
-                            $$->u.ident.fntype = 0;
-                            $$->u.ident.fname = strdup(n->fname);
-                            $$->u.ident.line = n->line;
-                          } else if(n2 != NULL){
-                            struct ast_node *tmp = ast_node_alloc(AST_IDENT);
-                            $$ = tmp;
-                            $$->u.ident.name = strdup((char *)$1);
-                            $$->u.ident.fntype = 0;
-                            $$->u.ident.fname = strdup(n2->fname);
-                            $$->u.ident.line = n2->line;
-                          } else {
-                            struct ast_node *tmp = ast_node_alloc(AST_IDENT);
-                            $$ = tmp;
-                            $$->u.ident.name = strdup((char *)$1);
-                            $$->u.ident.fntype = 0;
-                          }
-                          fprintf(stderr, "ID %s\n",  (char *)$1);
-                          $$->prev = identi;
-                          identi = $$;
-                          id_type = 0;
-                          counter++;
+                          struct ast_node *tmp = ast_node_alloc(AST_IDENT);
+                          $$ = tmp;
+                          $$->u.ident.name = strdup((char *)$1);
+                          $$->u.ident.line = line;
+                          $$->u.ident.fname = filename;
                }
                | constant_expr
                | parenthesized_expr
@@ -653,32 +653,26 @@ component_expr : postfix_expr '.' IDENT {
 
 function_call  :  postfix_expr '(' ')' {
                     identi->u.ident.fntype = 1;
-                    id_type = 1;
                     $$ = ast_node_alloc(AST_FUNC);
                     $$->u.func.name = $1;
                     $$->u.func.args = NULL;
+                    $$->u.func.numargs = 0;
+
                }
                |  postfix_expr '(' expr_list ')' {
-                   id_type = 3;
                    $$ = ast_node_alloc(AST_FUNC);
                    $$->u.func.name = $1;
                    $$->u.func.args = $3;
+                   $$->u.func.numargs = numargs;
+                   numargs = 0;
                }
                ;
 
 expr_list      : assignment_expr {
-                //fprintf(stderr, "ARG, COUNTOLD %d, COUNTER %d\n",  count_old, counter);
-                if(counter > count_old + 1){
-                  //fprintf(stderr, "PNAME %s\n",  identi->prev->u.ident.name);
-                  identi->prev->u.ident.fntype = 1;
-                } else{
-                  //fprintf(stderr, "NAME %s\n",  identi->u.ident.name);
-                  identi->u.ident.fntype = 1;
-                }
-                count_old = counter;
+                numargs++;
                }
                | expr_list ',' assignment_expr {
-                //fprintf(stderr, "ARG, COUNT %d\n",  counter);
+                 numargs++;
                 $$ = ast_node_alloc(AST_EXPR_LIST);
                 $$->u.expr_list.omember = $1;
                 $$->u.expr_list.nmember = $3;
@@ -943,11 +937,11 @@ conditional_expr : log_or_expr
                  /* INSERT IF and IF-ELSE STATEMENTS HERE */
 
 assignment_expr :  conditional_expr {}
-                |  unary_expr assignment_op assignment_expr {
+                |  unary_expr assignment_op {} assignment_expr {
                  $$ = ast_node_alloc(AST_ASSIGN);
                  $$->u.assign.left = $1;
                  if($2 == '=')
-                  $$->u.assign.right = $3;
+                  $$->u.assign.right = $4;
                  else{
                   struct ast_node *binop = ast_node_alloc(AST_BINOP);
                   binop->u.binop.left = $1;
@@ -963,7 +957,7 @@ assignment_expr :  conditional_expr {}
                     case XOREQ:   binop->u.binop.operator = '^'; break;
                     case OREQ:    binop->u.binop.operator = '|'; break;
                   }
-                  binop->u.binop.right = $3;
+                  binop->u.binop.right = $4;
                   $$->u.assign.right = binop;
                  }
                 }
@@ -982,7 +976,7 @@ assignment_op  : '='      {$$ = '=';}
                | OREQ     {$$ = OREQ;}
                ;
 
-expr           : assignment_expr {  counter = 0; count_old = 0;/*print_ast($$, 0);*/}
+expr           : assignment_expr {numargs = 0;/*print_ast($$, 0);*/}
                | expr ',' assignment_expr {
                  $$ = ast_node_alloc(AST_EXPR_LIST);
                  $$->u.expr_list.omember = $1;
@@ -1006,7 +1000,7 @@ int exit_scope(){
 
 int add_stg_class(struct sym *entry){
   if(stg == 0){
-    if(entry->curr_tab->type == SCOPE_GLOB){
+    if(entry->curr_tab->type == SCOPE_GLOB || entry->ident == ID_FUNC){
       stg = STG_EXTERN;
     } else if(entry->curr_tab->type == SCOPE_FUNC || entry->curr_tab->type == SCOPE_BLOCK){
       stg = STG_AUTO;

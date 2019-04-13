@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include "symtab.h"
 
 enum ast_types {AST_ASSIGN = 1, AST_UNOP, AST_BINOP, AST_NUMBER, AST_IDENT, AST_CHARLIT,
   AST_STRING, AST_FUNC, AST_SIZEOF, AST_COMP_SELECT, AST_EXPR_LIST, AST_TOP_EXPR,
@@ -77,6 +78,7 @@ struct node_comp{
 struct node_func{
   struct ast_node *name;
   struct ast_node *args;
+  int numargs;
   int type;
   int line;
   char *fname;
@@ -132,6 +134,8 @@ struct node_goto{
 
 struct node_label{
   char *label;
+  int line;
+  char *fname;
   int icase;
 };
 
@@ -194,7 +198,7 @@ struct ast_node{
 
 struct ast_node *ast_node_alloc(int node_type);
 
-void print_ast(struct ast_node *root, int level);
+void print_ast(struct ast_node *root, int level, int fn, struct sym_tab *tab);
 char* print_kw(int token);
 void ast_node_link(struct ast_node **head, struct ast_node **tail, struct ast_node *ins);
 

@@ -258,6 +258,12 @@ struct sym *add_sym(struct ast_node *node, struct sym_tab *curr_tab, char *fname
       n->n = node->next;
       return n;
     }
+    case ID_LABEL: {
+      struct sym *n = new_sym(ID_LABEL, node->u.ident.name, curr_tab, NULL, fname, line);
+      struct sym *i = install_sym(curr_tab, n, line);
+      n->n = node->next;
+      return n;
+    }
   }
   return NULL;
 }
