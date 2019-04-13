@@ -2,6 +2,7 @@
 %{ /* Parser */
 #include "ast.h"
 #include "symtab.h"
+#include "quad.h"
 #include <stdio.h>
 #include <stdlib.h>
 

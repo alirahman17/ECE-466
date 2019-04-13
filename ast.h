@@ -16,6 +16,8 @@ enum ast_types {AST_ASSIGN = 1, AST_UNOP, AST_BINOP, AST_NUMBER, AST_IDENT, AST_
 enum num_signs {UNSIGNED_T = 0, SIGNED_T = 1};
 enum num_types {INT_T = 0, LONG_T, LONGLONG_T, DOUBLE_T, LONGDOUBLE_T, FLOAT_T};
 
+struct sym_tab *tmp;
+
 struct node_ident{
   char *name;
   int type;
