@@ -90,6 +90,7 @@ decl_func      : decl_stmt {}
                ;
 
 func           : decl_specs declarator {
+                decl = 0;
                 struct sym *search = NULL;
                 if(head->u.ident.name != NULL){
                   search = search_all(curr_scope, head->u.ident.name, ID_FUNC);
@@ -116,7 +117,7 @@ func           : decl_specs declarator {
                 fprintf(stdout, "AST Dump for function %s\n LIST {\n",curr_scope->symsE->name);
                 print_ast($5, 2, 0, tmp);
                 fprintf(stdout, " }\n");
-                /* PRINT AST DUMP FOR FUNC */
+                //struct quad *q = quad_gen($5);
                }
                ;
 
@@ -254,7 +255,7 @@ compound_stmt  : {
                }
                ;
 
-decl           : decl_specs ';' {}
+decl           : decl_specs ';' {decl = 0;}
                | decl_specs init_decl_list ';' {}
                ;
 
