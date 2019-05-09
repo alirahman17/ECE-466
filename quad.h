@@ -17,6 +17,7 @@ struct quad {
   struct ast_node *src1;
   struct ast_node *src2;
   struct quad *next;
+  struct quad *prev;
 };
 
 struct quad_list {

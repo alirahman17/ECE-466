@@ -27,7 +27,11 @@ struct quad *emit(int opcode, struct ast_node *src1, struct ast_node *src2, stru
   q->src2 = src2;
   q->dest = dest;
 
-  quad_list_append(q, curr_bb->q_list);
+  if(q->opcode == LEA && curr_bb->q_list->tail != NULL && curr_bb->q_list->tail->opcode == LOAD){
+      curr_bb->q_list->tail = curr_bb->q_list->tail->prev;
+  } else{
+    quad_list_append(q, curr_bb->q_list);
+  }
   return q;
 }
 
@@ -289,6 +293,7 @@ struct quad_list *quad_list_append(struct quad *q, struct quad_list *l){
     l->head = q;
     l->tail = q;
   } else{
+    q->prev = l->tail;
     l->tail->next = q;
     l->tail = q;
   }
