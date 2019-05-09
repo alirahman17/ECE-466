@@ -303,7 +303,7 @@ init_decl_list : declarator {
                       break;
                     }
                     if(n2->n->node_type == AST_POINTER){
-                      offset = 4;
+                      offset = 8;
                       break;
                     }
                     if(n2->n->node_type == AST_ARR){

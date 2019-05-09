@@ -134,6 +134,10 @@ struct ast_node *gen_rvalue(struct ast_node *node, struct ast_node *target){
                     left = gen_rvalue(node->u.binop.left, NULL);
                     right = gen_rvalue(node->u.binop.right, NULL);
 
+                    if(target == NULL){
+                      target = new_temp();
+                    }
+
                     if(node->u.binop.operator == '+' || node->u.binop.operator == '-'){
                       struct ast_node *num = ast_node_alloc(AST_NUMBER);
                       struct sym *sl = NULL;
@@ -156,7 +160,7 @@ struct ast_node *gen_rvalue(struct ast_node *node, struct ast_node *target){
                           }
                         }
                         else
-                          num->u.num.intval = 4;
+                          num->u.num.intval = 8;
                         struct quad *q = emit('*', right, num, tmp);
                         //printf("%%T%05d, %d: %d * %d\n", q->dest->u.temp.number, q->opcode, q->src1->u.num.intval, q->src2->u.num.intval);
                         right = tmp;
@@ -172,7 +176,7 @@ struct ast_node *gen_rvalue(struct ast_node *node, struct ast_node *target){
                           }
                         }
                         else
-                          num->u.num.intval = 4;
+                          num->u.num.intval = 8;
                         emit('*', left, num, tmp);
                         left = tmp;
                       } else if(sl && (sl->n->node_type == AST_POINTER || sl->n->node_type == AST_ARR) && sr && (sr->n->node_type == AST_POINTER || sr->n->node_type == AST_ARR) ){
@@ -210,10 +214,6 @@ struct ast_node *gen_rvalue(struct ast_node *node, struct ast_node *target){
                         emit('/', tmp, size, target);
                         return target;
                       }
-                    }
-
-                    if(target == NULL){
-                      target = new_temp();
                     }
 
                     int b_op = node->u.binop.operator;
@@ -319,9 +319,9 @@ int get_sizeof(struct ast_node *node, struct sym_tab *syms){
   switch(node->node_type){
     case AST_CHARLIT: 	return 1;
     case AST_NUMBER: 	  return 4;
-    case AST_POINTER:   return 4;
+    case AST_POINTER:   return 8;
     case AST_UNOP:      if(node->u.unop.operator == '&')
-     	                    return 4;
+     	                    return 8;
     case AST_SCALAR:    if(node->u.scalar.type == CHAR)
                           return 1;
                         else
@@ -329,7 +329,7 @@ int get_sizeof(struct ast_node *node, struct sym_tab *syms){
     case AST_IDENT:     s = search_all(sym_tab, node->u.ident.name, node->u.ident.type);
                         n = s->n;
                         if(n->node_type == AST_POINTER)
-                          return 4;
+                          return 8;
 
                         if(n->node_type == AST_SCALAR)
                           return get_sizeof(n, sym_tab);
@@ -818,13 +818,12 @@ void asm_setup(void){
   struct sym *s = sym_tab->parent->symsS;
 
   while(s != NULL){
-    if(s->n->node_type == AST_SCALAR || s->n->node_type == AST_ARR){
-      int size = get_sizeof(s->n, NULL);
-      fprintf(outfile, "\t.comm %s, %d, %d\n", s->name, size, (size == 1 || size == 2)?size:4);
-    }
-    else if(s->ident == ID_FUNC){
+    if(s->ident == ID_FUNC){
       fprintf(outfile, "\t.globl %s\n", s->name);
       fprintf(outfile, "\t.type %s, @function\n", s->name);
+    } else if(s->n->node_type == AST_SCALAR || s->n->node_type == AST_ARR){
+      int size = get_sizeof(s->n, NULL);
+      fprintf(outfile, "\t.comm %s, %d, %d\n", s->name, size, (size == 1 || size == 2)?size:4);
     }
     s = s->next;
   }
@@ -1015,6 +1014,7 @@ void translate_quad(struct quad *q){
                   asm_print(q->dest);
                   fprintf(outfile, "\n");
                 }
+                break;
 
     case RET:   if (q->src1 != NULL){
                   fprintf(outfile, "movl ");
