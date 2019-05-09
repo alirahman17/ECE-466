@@ -62,11 +62,13 @@ struct sym {
   enum namespace_type ns;
   char *fname;
   int line;
+  int frame_offset;
   enum ident_type ident;
   union {
     struct sym_var var;
     struct sym_func func;
   } e;
+  int stg;
 };
 
 struct sym_tab *global, *current;

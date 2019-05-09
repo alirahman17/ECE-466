@@ -10,7 +10,8 @@ struct ast_node * ast_node_alloc(int node_type){
   return n;
 }
 
-void print_ast(struct ast_node *root, int level, int fn, struct sym_tab *tab){
+void print_ast(struct ast_node *node, int level, int fn, struct sym_tab *tab){
+  struct ast_node *root = node;
   if(root->node_type != AST_EXPR_LIST && root->node_type != AST_TOP_EXPR && root->node_type != AST_TOP_EXPR_ST && root->node_type != AST_CASE){
     fprintf(stdout, "%*s", level, "");
   }
@@ -227,9 +228,44 @@ void ast_node_link(struct ast_node **head, struct ast_node **tail, struct ast_no
     *tail = ins;
   } else {
     (*tail)->next = ins;
+    ins->prev = (*tail);
     *tail = ins;
   }
   while((*tail)->next != NULL){
     *tail = (*tail)->next;
   }
+}
+
+struct ast_node *reverse(struct ast_node *root, int dir){
+    struct ast_node *n = NULL;
+    while(root != NULL){
+      struct ast_node *temp;
+      if(dir == 0){
+        temp = root->prev;
+        root->prev = n;
+      } else if(dir == 1){
+        temp = root->next;
+        root->next = n;
+      }
+      n = root;
+      root = temp;
+    }
+    return n;
+}
+
+struct ast_node *find_ret_value(struct ast_node *root){
+	struct ast_node *n = root;
+	while (n != NULL)
+	{
+		if (n->node_type == AST_SCALAR)
+		{
+			return n;
+		}
+		else if (n->node_type == AST_POINTER)
+		{
+			return n;
+		}
+		n = n->prev;
+	}
+	return NULL;
 }

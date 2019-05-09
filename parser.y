@@ -22,6 +22,8 @@ struct ast_node *identi = NULL;
 struct ast_node *head;
 struct ast_node *tail;
 struct sym_tab *curr_scope;
+int curr_offset = 0;
+FILE *output_file;
 %}
 %error-verbose
 %union{ /* YYLVAL */
@@ -110,6 +112,7 @@ func           : decl_specs declarator {
                   tail = (struct ast_node *)NULL;
                 }
                 enter_scope(SCOPE_FUNC);
+                curr_offset = 0;
                } '{'  decl_stmt_list '}' {
                 struct sym_tab *tmp = curr_scope;
                 exit_scope();
@@ -117,6 +120,7 @@ func           : decl_specs declarator {
                 fprintf(stdout, "AST Dump for function %s\n LIST {\n",curr_scope->symsE->name);
                 print_ast($5, 2, 0, tmp);
                 fprintf(stdout, " }\n");
+                gen_quad($2, $5, tmp, output_file);
                 //struct quad *q = quad_gen($5);
                }
                ;
@@ -125,7 +129,9 @@ decl_stmt_list : decl_stmt {$$ = $1;}
                | decl_stmt_list decl_stmt {
                  $$ = ast_node_alloc(AST_TOP_EXPR_ST);
                  $$->u.top_expr_st.left = $1;
+                 $$->u.top_expr_st.left->prev = $$;
                  $$->u.top_expr_st.right = $2;
+                 $$->u.top_expr_st.right->prev = $$;
                }
                ;
 
@@ -286,6 +292,35 @@ init_decl_list : declarator {
                 ast_node_link(&head, &tail,$<astn>0);
                 struct sym *n = add_sym(head, curr_scope, filename, line);
                 add_stg_class(n);
+                struct sym *n2 = n;
+                int offset = 0;
+                while(n2 != NULL){
+                    if(n2->n->node_type == AST_SCALAR){
+                      if(n2->n->u.scalar.type == CHAR)
+                        offset = 1;
+                      else
+                        offset = 4;
+                      break;
+                    }
+                    if(n2->n->node_type == AST_POINTER){
+                      offset = 4;
+                      break;
+                    }
+                    if(n2->n->node_type == AST_ARR){
+                      struct sym *n3 = n2;
+                      offset = get_sizeof(n3->n->u.arr.t, curr_scope);
+                      break;
+                    }
+                  n2 = n2->next;
+                }
+                n->frame_offset = curr_offset + offset;
+                if(n2->n->node_type == AST_ARR)
+                  curr_offset += offset * n2->n->u.arr.num;
+                else
+                  curr_offset += offset;
+                if(n->e.var.stg == STG_EXTERN){
+                  n->frame_offset = 0;
+                }
                 print_sym(n, 0);
                 head = (struct ast_node *)NULL;
                 tail = (struct ast_node *)NULL;
@@ -521,12 +556,14 @@ direct_decl    : IDENT {
                | direct_decl '[' ']' {
                  struct ast_node *n = ast_node_alloc(AST_ARR);
                  n->u.arr.num = 0;
+                 n->u.arr.t = $1;
                  ast_node_link(&head, &tail, n);
                  $$ = head;
                }
                | direct_decl '[' NUMBER ']' {
                  struct ast_node *n = ast_node_alloc(AST_ARR);
                  n->u.arr.num = $3;
+                 n->u.arr.t = $1;
                  ast_node_link(&head, &tail, n);
                  $$ = head;
                }
@@ -551,11 +588,13 @@ pointer        : '*' {
                | '*' pointer {
                  struct ast_node *n = ast_node_alloc(AST_POINTER);
                  n->next = $2;
+                 $2->prev = n;
                  $$ = n;
                }
                | '*' type_qual_list pointer {
                  struct ast_node *n = ast_node_alloc(AST_POINTER);
                  n->next = $3;
+                 $2->prev = n;
                  $$ = n;
                }
                ;
@@ -571,6 +610,7 @@ type_qual_list : type_qual {
 expr_statement : expr ';' {
                 $$ = ast_node_alloc(AST_TOP_EXPR);
                 $$->u.top_expr.left = $1;
+                $$->u.top_expr_st.left->prev = $$;
                 //fprintf(stdout, "\n\n-------------- LINE %d --------------\n", line);
                 //print_ast($$, 0);
                }
@@ -632,7 +672,9 @@ subscript_expr : postfix_expr '[' expr ']' {
                 $$->u.unop.left = next;
                 next->u.binop.operator = '+';
                 next->u.binop.left = $1;
+                next->u.binop.left->prev = next;
                 next->u.binop.right = $3;
+                next->u.binop.right->prev = next;
                }
                ;
 
@@ -665,7 +707,10 @@ function_call  :  postfix_expr '(' ')' {
                    $$ = ast_node_alloc(AST_FUNC);
                    $$->u.func.name = $1;
                    $$->u.func.args = $3;
-                   $$->u.func.numargs = numargs;
+                   if($3->node_type == AST_EXPR_LIST)
+                    $$->u.func.numargs = $3->u.expr_list.num;
+                   else
+                    $$->u.func.numargs = 1;
                    numargs = 0;
                }
                ;
@@ -676,8 +721,11 @@ expr_list      : assignment_expr {
                | expr_list ',' assignment_expr {
                  numargs++;
                 $$ = ast_node_alloc(AST_EXPR_LIST);
+                $1->next = $3;
+                $3->prev = $1;
                 $$->u.expr_list.omember = $1;
                 $$->u.expr_list.nmember = $3;
+                $$->u.expr_list.num = numargs;
                }
                ;
 
@@ -978,7 +1026,7 @@ assignment_op  : '='      {$$ = '=';}
                | OREQ     {$$ = OREQ;}
                ;
 
-expr           : assignment_expr {numargs = 0;/*print_ast($$, 0);*/}
+expr           : assignment_expr {/*print_ast($$, 0);*/}
                | expr ',' assignment_expr {
                  $$ = ast_node_alloc(AST_EXPR_LIST);
                  $$->u.expr_list.omember = $1;
@@ -1019,6 +1067,14 @@ int add_stg_class(struct sym *entry){
 }
 
 int main(int argc, char **argv){
+  if (argc > 2){
+    fprintf(stderr, "Error: Expected format ./parser [outfile]\n");
+    exit(-1);
+  }
+  if (argc == 2)
+    output_file = fopen(argv[1], "w");
+  else
+    output_file = stdout;
   curr_scope = new_sym_table(SCOPE_GLOB, line);
   return yyparse();
 }

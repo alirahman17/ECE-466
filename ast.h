@@ -33,6 +33,7 @@ struct node_charlit{
 struct node_string{
   char word[4096];
   int length;
+  int number;
 };
 
 struct node_number{
@@ -89,6 +90,7 @@ struct node_func{
 struct node_expr_list{
   struct ast_node *omember;
   struct ast_node *nmember;
+  int num;
 };
 
 struct node_assign{
@@ -107,6 +109,9 @@ struct node_point{
 
 struct node_arr{
   int num;
+  char *name;
+  int type;
+  struct ast_node *t;
 };
 
 struct node_for{
@@ -161,6 +166,10 @@ struct node_if_t_e{
   struct ast_node *estmt;
 };
 
+struct node_temp{
+  int number;
+};
+
 struct ast_node{
   int node_type;
   union {
@@ -193,15 +202,20 @@ struct ast_node{
     struct node_case lcase;
     struct node_if nif;
     struct node_if_t_e if_t_else;
+
+    struct node_temp temp;
   } u;
   struct ast_node *next;
   struct ast_node *prev;
+  struct ast_node *parent;
 };
 
 struct ast_node *ast_node_alloc(int node_type);
 
 void print_ast(struct ast_node *root, int level, int fn, struct sym_tab *tab);
+struct ast_node *reverse(struct ast_node *root, int dir);
 char* print_kw(int token);
 void ast_node_link(struct ast_node **head, struct ast_node **tail, struct ast_node *ins);
+struct ast_node *find_ret_value(struct ast_node *root);
 
 #endif

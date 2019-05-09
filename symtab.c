@@ -101,6 +101,7 @@ int print_scope(struct sym *entry){
 int traceback(struct sym *entry){
   int indent = 0;
   struct ast_node *n = entry->n;
+  int type = 0;
   while(n != NULL){
     int curr_ind = indent;
     printf("%.*s", indent, "                                                                              ");
@@ -185,6 +186,7 @@ int print_sym(struct sym *entry, int step){
       print_scope(entry);
       printf("as a variable with stg ");
       print_stg(entry->e.var.stg);
+      printf("(offset = -%d) ", entry->frame_offset);
       printf("of type:\n");
       traceback(entry);
       break;
