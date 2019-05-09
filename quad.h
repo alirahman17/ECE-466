@@ -77,4 +77,8 @@ void print_quad(struct quad *q);
 void print_rval(struct ast_node *node);
 void *gen_quad(struct ast_node *func, struct ast_node  *stmt, struct sym_tab *sym_tabl, FILE *f);
 
+void asm_setup();
+void prologue(struct ast_node *func);
+void asm_bb(struct basic_block *block);
+
 #endif

@@ -67,7 +67,7 @@ struct ast_node *gen_rvalue(struct ast_node *node, struct ast_node *target){
                       } else{
                         return node;
                       }
-    case AST_NUMBER:
+    case AST_NUMBER:  return node;
     case AST_CHARLIT: return node;
     case AST_STRING:
                     node->u.string.number = string_number;
@@ -75,8 +75,7 @@ struct ast_node *gen_rvalue(struct ast_node *node, struct ast_node *target){
                     sprintf(string_buffer + strlen(string_buffer), "\t.section .rodata\n");
                     sprintf(string_buffer + strlen(string_buffer), ".string_ro_%d:\n", node->u.string.number);
                     sprintf(string_buffer + strlen(string_buffer), "\t.string \"");
-                    for(int i = 0; i < node->u.string.length; i++)
-                    {
+                    for(int i = 0; i < node->u.string.length; i++){
                       char c = node->u.string.word[i];
                       switch(c)
                       {
@@ -529,10 +528,9 @@ void *gen_fncall(struct ast_node *node, struct ast_node *target){
   while(n != NULL){
     struct ast_node *num = ast_node_alloc(AST_NUMBER);
     num->u.num.intval = total_args - sort_arg;
-    if (n->node_type == AST_BINOP || n->node_type == AST_UNOP)
+    if(n->node_type == AST_BINOP || n->node_type == AST_UNOP)
       arg = gen_rvalue(n, NULL);
     else if(n->node_type == AST_EXPR_LIST){
-      //fprintf(stderr, "HERE EXPR\n");
       n = n->u.expr_list.nmember;
       continue;
     }
@@ -777,7 +775,7 @@ void print_rval(struct ast_node *node){
     for(int i = 0; i < node->u.string.length; i++)
       printf("%c",node->u.string.word[i]);
 
-    //quad_gen_rvalue(node, NULL);
+    gen_rvalue(node, NULL);
   }
 }
 
@@ -803,9 +801,275 @@ void *gen_quad(struct ast_node *func, struct ast_node  *stmt, struct sym_tab *sy
   printf("\n---------- QUADS END ----------\n\n");
 
   // TARGET CODE
+  outfile = f;
+  asm_setup();
+  prologue(func); // THE ENDGAME
+  asm_bb(curr_bb_list->head);
 
   fn++;
 	bbN = 1;
 	temp = 0;
 	memset(string_buffer, 0, 4096);
+}
+
+void asm_setup(void){
+  if(fn != 1)
+    return;
+  struct sym *s = sym_tab->parent->symsS;
+
+  while(s != NULL){
+    if(s->n->node_type == AST_SCALAR || s->n->node_type == AST_ARR){
+      int size = get_sizeof(s->n, NULL);
+      fprintf(outfile, "\t.comm %s, %d, %d\n", s->name, size, (size == 1 || size == 2)?size:4);
+    }
+    else if(s->ident == ID_FUNC){
+      fprintf(outfile, "\t.globl %s\n", s->name);
+      fprintf(outfile, "\t.type %s, @function\n", s->name);
+    }
+    s = s->next;
+  }
+
+  fprintf(outfile, "%s", string_buffer);
+}
+
+void prologue(struct ast_node *func){
+  struct sym *s = sym_tab->symsS;
+  while (s != NULL){
+    if(s->n->node_type == AST_SCALAR || s->n->node_type == AST_IDENT || s->n->node_type == AST_ARR){
+      if(s->e.var.stg == STG_EXTERN){
+        int size = get_sizeof(s->n, NULL);
+        fprintf(outfile, "\t.comm %s, %d, %d\n", s->name, size, (size == 1 || size == 2)?size:4);
+      }
+      else if(s->e.var.stg == STG_STATIC){
+        int size = get_sizeof(s->n, NULL);
+        fprintf(outfile, "\t.local%s.%d\n", s->name, fn);
+        fprintf(outfile, "\t.comm %s.%d, %d, %d\n", s->name, fn, size, (size == 1 || size == 2)?size:4);
+      }
+      else
+        stackSpace = s->frame_offset;
+    }
+
+    s = s->next;
+  }
+
+  stackSpace += (temp * 4);
+  fprintf(outfile, "\t.text\n");
+  fprintf(outfile, "%s:\n", func->u.ident.name);
+  fprintf(outfile, "\tpushl %%ebp\n");
+  fprintf(outfile, "\tmovl %%esp, %%ebp\n");
+  fprintf(outfile, "\tsubl $%d, %%esp\n", stackSpace);
+}
+
+void asm_print(struct ast_node *node){
+  if(node == NULL){
+    return;
+  }
+  if(node->node_type == AST_IDENT){
+    struct sym *s = search_all(sym_tab, node->u.ident.name, node->u.ident.type);
+    if(s->e.var.stg == STG_AUTO){
+      fprintf(outfile, "-%d(%%ebp)", s->frame_offset);
+    } else if(s->e.var.stg == STG_STATIC){
+      fprintf(outfile, "%s.%d", s->name, fn);
+    } else{
+      fprintf(outfile, "%s", s->name);
+    }
+  }
+
+  if(node->node_type == AST_TEMP){
+    int temp_offset = (stackSpace - (4 * temp)) + (4 * node->u.temp.number);
+    fprintf(outfile, "-%d(%%ebp)", temp_offset);
+  }
+
+  if(node->node_type == AST_NUMBER){
+    fprintf(outfile, "$%llu", node->u.num.intval);
+  }
+
+  if(node->node_type == AST_CHARLIT){
+    fprintf(outfile, "$%d", (unsigned char)node->u.charlit.c);
+  }
+
+  if(node->node_type == AST_ARR){
+    struct ast_node *a = node->u.arr.t;
+    while(a != NULL && a->node_type != AST_IDENT){
+      a = a->next;
+    }
+    struct sym *s = search_all(sym_tab, a->u.ident.name, a->u.ident.type);
+    if(s->e.var.stg == STG_AUTO){
+      fprintf(outfile, "-%d(%%ebp)", s->frame_offset);
+    } else if(s->e.var.stg == STG_STATIC){
+      fprintf(outfile, "%s.%d", s->name, fn);
+    } else{
+      fprintf(outfile, "%s", s->name);
+    }
+  }
+
+  if(node->node_type == AST_STRING){
+    fprintf(outfile, ".string_%d", node->u.string.number);
+  }
+}
+
+void translate_quad(struct quad *q){
+  if(q == NULL){
+    return;
+  }
+  fprintf(outfile, "\t");
+  switch(q->opcode){
+    case '+':   fprintf(outfile, "movl ");
+                asm_print(q->src1);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\taddl ");
+                asm_print(q->src2);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\tmovl %%ecx, ");
+                asm_print(q->dest);
+                fprintf(outfile, "\n");
+                break;
+    case '-':   fprintf(outfile, "movl ");
+                asm_print(q->src1);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\tsubl ");
+                asm_print(q->src2);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\tmovl %%ecx, ");
+                asm_print(q->dest);
+                fprintf(outfile, "\n");
+                break;
+    case '*':   fprintf(outfile, "movl ");
+                asm_print(q->src1);
+                fprintf(outfile, ", %%eax\n");
+                fprintf(outfile, "\txor %%edx, %%edx\n");
+                fprintf(outfile, "\tmovl ");
+                asm_print(q->src2);
+                fprintf(outfile, ", %%ebx\n");
+                fprintf(outfile, "\tmul %%ebx\n");
+                fprintf(outfile, "\tmovl %%eax, ");
+                asm_print(q->dest);
+                fprintf(outfile, "\n");
+                break;
+    case '/':   fprintf(outfile, "movl ");
+                asm_print(q->src1);
+                fprintf(outfile, ", %%eax\n");
+                fprintf(outfile, "\txor %%edx, %%edx");
+                fprintf(outfile, "\tmovl ");
+                asm_print(q->src2);
+                fprintf(outfile, ", %%ebx\n");
+                fprintf(outfile, "\tdiv %%ebx\n");
+                fprintf(outfile, "\tmovl %%eax, ");
+                asm_print(q->dest);
+                fprintf(outfile, "\n");
+                break;
+    case LOAD:  fprintf(outfile, "movl ");
+                asm_print(q->src1);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\tmovl (%%ecx), %%ebx\n");
+                fprintf(outfile, "\tmovl %%ebx, ");
+                asm_print(q->dest);
+                fprintf(outfile, "\n");
+                break;
+    case '&':
+    case LEA:   fprintf(outfile, "lea ");
+                asm_print(q->src1);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\tmovl %%ecx, ");
+                asm_print(q->dest);
+                fprintf(outfile, "\n");
+                break;
+    case MOV:   fprintf(outfile, "movl ");
+                asm_print(q->src1);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\tmovl %%ecx, ");
+                asm_print(q->dest);
+                fprintf(outfile, "\n");
+                break;
+    case STORE: fprintf(outfile, "movl ");
+                asm_print(q->src1);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\tmovl ");
+                asm_print(q->src2);
+                fprintf(outfile, ", %%ebx\n");
+                fprintf(outfile, "\tmovl %%ecx, (%%ebx)\n");
+                break;
+    case CMP:   fprintf(outfile, "movl ");
+                asm_print(q->src1);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\tmovl ");
+                asm_print(q->src2);
+                fprintf(outfile, ", %%ebx\n");
+                fprintf(outfile, "\tcmp %%ebx, %%ecx\n");
+                break;
+    case ARG:   fprintf(outfile, "movl ");
+                asm_print(q->src2);
+                fprintf(outfile, ", %%ecx\n");
+                fprintf(outfile, "\tpushl %%ecx\n");
+                break;
+    case CALL:  fprintf(outfile, "call ");
+                asm_print(q->src1);
+                fprintf(outfile, "\n");
+                struct ast_node *n = ast_node_alloc(AST_NUMBER);
+                n->u.num.intval = q->src2->u.num.intval * 4;
+                fprintf(outfile, "\taddl ");
+                asm_print(n);
+                fprintf(outfile, ", %%esp\n");
+                if(q->dest != NULL){
+                  fprintf(outfile, "\tmovl %%eax, ");
+                  asm_print(q->dest);
+                  fprintf(outfile, "\n");
+                }
+
+    case RET:   if (q->src1 != NULL){
+                  fprintf(outfile, "movl ");
+                  asm_print(q->src1);
+                  fprintf(outfile, ", %%eax\n");
+                  fprintf(outfile, "\t");
+                }
+                fprintf(outfile, "leave\n");
+                fprintf(outfile, "\tret\n");
+                break;
+  }
+}
+
+void asm_bb(struct basic_block *block){
+  if(block != NULL){
+    struct basic_block *bb = block;
+    struct quad *q = bb->q_list->head;
+    fprintf(outfile, "%s:\n", bb->name);
+    while (q != NULL){
+      translate_quad(q);
+      q = q->next;
+    }
+
+    fprintf(outfile, "\t");
+
+    switch (bb->branch){
+      case NEVER: 		break;
+
+      case ALWAYS:		fprintf(outfile, "jmp %s\n", bb->left->name);
+                    break;
+
+      case COND_LT:		fprintf(outfile, "jl %s\n", bb->left->name);
+                     fprintf(outfile, "\tjmp %s\n", bb->right->name);
+                     break;
+
+      case COND_GT:		fprintf(outfile, "jg %s\n", bb->left->name);
+                     fprintf(outfile, "\tjmp %s\n", bb->right->name);
+                     break;
+
+      case COND_LTEQ: 	fprintf(outfile, "jle %s\n", bb->left->name);
+                       fprintf(outfile, "\tjmp %s\n", bb->right->name);
+                       break;
+
+      case COND_GTEQ: 	fprintf(outfile, "jge %s\n", bb->left->name);
+                       fprintf(outfile, "\tjmp %s\n", bb->right->name);
+                       break;
+
+      case COND_EQ: 		fprintf(outfile, "je %s\n", bb->left->name);
+                      fprintf(outfile, "\tjmp %s\n", bb->right->name);
+                      break;
+
+      case COND_NEQ: 		fprintf(outfile, "jne %s\n", bb->left->name);
+                       fprintf(outfile, "\tjmp %s\n", bb->right->name);
+                       break;
+    }
+    asm_bb(bb->next);
+  }
 }
